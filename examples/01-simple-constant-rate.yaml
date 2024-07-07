@@ -1,0 +1,13 @@
+name: Simple Constant Rate Example
+execution: serial
+scenarios:
+  - name: 100 RPS and 20 VUs for 1 minute
+    rate: 1000
+    interval: 1s
+    vus: 1
+    duration: 10s
+    request:
+      http:
+        url: http://0.0.0.0:8080/static
+        method: get
+        keepAlive: false
