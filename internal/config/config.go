@@ -27,10 +27,11 @@ type Request struct {
 }
 
 type HttpRequest struct {
-	Url       string  `yaml:"url"`
-	Method    string  `yaml:"method"`
-	Body      *string `yaml:"body"`
-	KeepAlive string  `yaml:"keepAlive"`
+	Url              string        `yaml:"url"`
+	Method           string        `yaml:"method"`
+	Body             *string       `yaml:"body"`
+	DisableKeepAlive bool          `yaml:"disableKeepAlive"`
+	Timeout          time.Duration `yaml:"timeout"`
 }
 
 func LoadFromFile(fileName string) (*Config, error) {

@@ -27,6 +27,8 @@ func execute(ctx context.Context, scenario config.Scenario) error {
 	rateTicker := time.NewTicker(scenario.Interval)
 	defer rateTicker.Stop()
 
+	httpClient := NewHttpClient(scenario.Request.Http)
+
 	queue := make(chan int, scenario.VUs)
 
 	// producer
@@ -70,7 +72,7 @@ func execute(ctx context.Context, scenario config.Scenario) error {
 						fmt.Printf("VU %d: shutting down\n", id)
 						return nil
 					}
-					if err := doHttpRequest(ctx, scenario.Request.Http, id, msg); err != nil {
+					if err := doHttpRequest(ctx, httpClient, scenario.Request.Http, id, msg); err != nil {
 						fmt.Printf("VU %d, msg %d: failed to send http request: %v\n", id, msg, err)
 					}
 				}
@@ -81,13 +83,13 @@ func execute(ctx context.Context, scenario config.Scenario) error {
 	return g.Wait()
 }
 
-func doHttpRequest(ctx context.Context, request config.HttpRequest, id int, msg int) error {
+func doHttpRequest(ctx context.Context, httpClient *http.Client, request config.HttpRequest, id int, msg int) error {
 	req, err := http.NewRequestWithContext(ctx, request.Method, request.Url, nil)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %v", err)
 	}
 
-	res, err := http.DefaultClient.Do(req)
+	res, err := httpClient.Do(req)
 	if err != nil {
 		return fmt.Errorf("failed to send request: %v", err)
 	}
