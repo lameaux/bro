@@ -3,7 +3,7 @@ package runner
 import (
 	"context"
 	"fmt"
-	"github.com/Lameaux/loadpro/internal/config"
+	"github.com/Lameaux/bro/internal/config"
 	"golang.org/x/sync/errgroup"
 	"net/http"
 	"time"

@@ -1,4 +1,4 @@
-module github.com/Lameaux/loadpro
+module github.com/Lameaux/bro
 
 go 1.22.5
 

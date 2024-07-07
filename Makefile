@@ -1,4 +1,4 @@
-APP_NAME := loadpro
+APP_NAME := bro
 SRC_DIR := .
 BUILD_DIR := ./bin
 BUILD_FILE := $(BUILD_DIR)/$(APP_NAME)

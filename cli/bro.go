@@ -4,8 +4,8 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/Lameaux/loadpro/internal/config"
-	"github.com/Lameaux/loadpro/internal/runner"
+	"github.com/Lameaux/bro/internal/config"
+	"github.com/Lameaux/bro/internal/runner"
 	"log"
 	"os"
 	"os/signal"
@@ -13,20 +13,21 @@ import (
 )
 
 const (
+	app     = "bro"
 	version = "v0.0.1"
 )
 
 var GitHash string
 
 func main() {
-	fmt.Printf("loadpro %s, build %s\n", version, GitHash)
+	fmt.Printf("%s %s, build %s\n", app, version, GitHash)
 
 	var configFile string
 	flag.StringVar(&configFile, "config", "", "Config YAML file")
 	flag.Parse()
 
 	if configFile == "" {
-		log.Fatal("--config parameter is missing. Example: loadpro --config myconfig.yaml")
+		log.Fatalf("--config parameter is missing. Example: %s --config myconfig.yaml", app)
 	}
 
 	c, err := config.LoadFromFile(configFile)

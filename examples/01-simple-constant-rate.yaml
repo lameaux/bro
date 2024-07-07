@@ -4,7 +4,7 @@ scenarios:
   - name: 100 RPS and 20 VUs for 1 minute
     rate: 1000
     interval: 1s
-    vus: 1
+    vus: 10
     duration: 10s
     request:
       http:

@@ -1,12 +1,12 @@
-# loadpro
-Load test like a Pro. ChatGPT made up this name.
+# bro
+**bro** is a load testing tool.
 
 # About
 
-**loadpro** is a load testing tool written in Go. 
+**bro** is written in Go. 
 
-Test scenarios are defined in YAML.
+Test scenarios are in YAML.
 
 # Examples
 
-Simple Constant Rate Example
+- Simple Constant Rate Example
