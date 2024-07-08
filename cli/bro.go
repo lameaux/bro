@@ -13,6 +13,14 @@ import (
 )
 
 const (
+	logo = `
+ _               
+ | |              
+ | |__  _ __ ___  
+ | '_ \| '__/ _ \ 
+ | |_) | | | (_) |
+ |_.__/|_|  \___/ 
+`
 	app     = "bro"
 	version = "v0.0.1"
 )
@@ -20,7 +28,7 @@ const (
 var GitHash string
 
 func main() {
-	fmt.Printf("%s %s, build %s\n", app, version, GitHash)
+	fmt.Printf("%s %s %s, build %s\n", logo, app, version, GitHash)
 
 	var configFile string
 	flag.StringVar(&configFile, "config", "", "Config YAML file")
