@@ -1,5 +1,3 @@
-# bro
-
 ```
   _               
  | |              
@@ -8,13 +6,12 @@
  | |_) | | | (_) |
  |_.__/|_|  \___/ 
 ```
+
 **bro** is a load testing tool.
 
 # About
 
-**bro** is written in Go. 
-
-Test scenarios are in YAML.
+It is written in Go with test scenarios defined in YAML.
 
 # Usage
 
