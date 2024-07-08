@@ -57,7 +57,7 @@ func main() {
 		cancel()
 	}()
 
-	fmt.Printf("Executing scenarios... Press Ctrl+C (SIGINT) or send SIGTERM to terminate.\n")
+	fmt.Println("Executing scenarios... Press Ctrl+C (SIGINT) or send SIGTERM to terminate.")
 	for _, scenario := range c.Scenarios {
 		err = runner.RunScenario(ctx, scenario)
 		if err != nil {
