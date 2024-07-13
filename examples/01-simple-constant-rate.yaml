@@ -1,14 +1,21 @@
 name: Simple Constant Rate Example
 execution: serial
 scenarios:
-  - name: 100 RPS and 20 VUs for 1 minute
-    rate: 1000
+  - name: Constant rate demo
+    rate: 10
     interval: 1s
     vus: 10
-    duration: 10s
-    request:
-      http:
-        url: http://0.0.0.0:8080/static
-        method: get
+    duration: 5s
+    http:
+      client:
         disableKeepAlive: true
         timeout: 10s
+      request:
+        url: http://0.0.0.0:8080/static
+        method: get
+      response:
+        code: 202
+    thresholds:
+      latency:
+        - p: 99
+          v: 500

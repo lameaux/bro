@@ -14,24 +14,37 @@ type Config struct {
 }
 
 type Scenario struct {
-	Name     string        `yaml:"name"`
-	Rate     int           `yaml:"rate"`
-	Interval time.Duration `yaml:"interval"`
-	VUs      int           `yaml:"vus"`
-	Duration time.Duration `yaml:"duration"`
-	Request  Request       `yaml:"request"`
+	Name       string        `yaml:"name"`
+	Rate       int           `yaml:"rate"`
+	Interval   time.Duration `yaml:"interval"`
+	VUs        int           `yaml:"vus"`
+	Duration   time.Duration `yaml:"duration"`
+	Http       Http          `yaml:"http"`
+	Thresholds Thresholds    `yaml:"thresholds"`
 }
 
-type Request struct {
-	Http HttpRequest `yaml:"http"`
+type Http struct {
+	Client   HttpClient   `yaml:"client"`
+	Request  HttpRequest  `yaml:"request"`
+	Response HttpResponse `yaml:"response"`
+}
+
+type HttpClient struct {
+	DisableKeepAlive bool          `yaml:"disableKeepAlive"`
+	Timeout          time.Duration `yaml:"timeout"`
 }
 
 type HttpRequest struct {
-	Url              string        `yaml:"url"`
-	Method           string        `yaml:"method"`
-	Body             *string       `yaml:"body"`
-	DisableKeepAlive bool          `yaml:"disableKeepAlive"`
-	Timeout          time.Duration `yaml:"timeout"`
+	Url    string  `yaml:"url"`
+	Method string  `yaml:"method"`
+	Body   *string `yaml:"body"`
+}
+
+type HttpResponse struct {
+	Code int `yaml:"code"`
+}
+
+type Thresholds struct {
 }
 
 func LoadFromFile(fileName string) (*Config, error) {

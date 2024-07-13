@@ -4,34 +4,40 @@ import (
 	"context"
 	"fmt"
 	"github.com/Lameaux/bro/internal/config"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
 	"net/http"
 	"time"
 )
 
 func RunScenario(ctx context.Context, scenario config.Scenario) error {
-	fmt.Printf("Scenario: %s\n", scenario.Name)
-	fmt.Printf("Generating %d requests per %v, running %d VUs for %v\n",
-		scenario.Rate,
-		scenario.Interval,
-		scenario.VUs,
-		scenario.Duration,
-	)
+	log.Info().Dict(
+		"scenario",
+		zerolog.Dict().
+			Str("name", scenario.Name).
+			Int("rate", scenario.Rate).
+			Dur("interval", scenario.Interval).
+			Int("vus", scenario.VUs).
+			Dur("duration", scenario.Duration),
+	).Msg("running scenario")
+
 	return execute(ctx, scenario)
 }
 
 func execute(ctx context.Context, scenario config.Scenario) error {
-	durationTicker := time.NewTicker(scenario.Duration)
-	defer durationTicker.Stop()
-
-	rateTicker := time.NewTicker(scenario.Interval)
-	defer rateTicker.Stop()
-
-	httpClient := NewHttpClient(scenario.Request.Http)
-
 	queue := make(chan int, scenario.VUs)
 
-	// producer
+	cancel := startGenerator(ctx, scenario, queue)
+	defer cancel()
+
+	return runSender(ctx, scenario, queue)
+}
+
+func startGenerator(ctx context.Context, scenario config.Scenario, queue chan<- int) func() {
+	durationTicker := time.NewTicker(scenario.Duration)
+	rateTicker := time.NewTicker(scenario.Interval)
+
 	go func() {
 		var num int
 
@@ -58,7 +64,15 @@ func execute(ctx context.Context, scenario config.Scenario) error {
 		}
 	}()
 
-	// consumers
+	return func() {
+		durationTicker.Stop()
+		rateTicker.Stop()
+	}
+}
+
+func runSender(ctx context.Context, scenario config.Scenario, queue <-chan int) error {
+	httpClient := NewHttpClient(scenario.Http.Client)
+
 	var g errgroup.Group
 	for vu := 0; vu < scenario.VUs; vu++ {
 		id := vu
@@ -69,11 +83,15 @@ func execute(ctx context.Context, scenario config.Scenario) error {
 					return ctx.Err()
 				case msg, ok := <-queue:
 					if !ok {
-						fmt.Printf("VU %d: shutting down\n", id)
+						log.Debug().Int("vuId", id).Msg("shutting down")
 						return nil
 					}
-					if err := doHttpRequest(ctx, httpClient, scenario.Request.Http, id, msg); err != nil {
-						fmt.Printf("VU %d, msg %d: failed to send http request: %v\n", id, msg, err)
+					if err := doHttpRequest(ctx, httpClient, scenario.Http, id, msg); err != nil {
+						log.Debug().
+							Int("vuId", id).
+							Int("msgId", msg).
+							Err(err).
+							Msg("failed to send http request")
 					}
 				}
 			}
@@ -83,19 +101,38 @@ func execute(ctx context.Context, scenario config.Scenario) error {
 	return g.Wait()
 }
 
-func doHttpRequest(ctx context.Context, httpClient *http.Client, request config.HttpRequest, id int, msg int) error {
-	req, err := http.NewRequestWithContext(ctx, request.Method, request.Url, nil)
+func doHttpRequest(ctx context.Context, httpClient *http.Client, httpConfig config.Http, id int, msg int) error {
+	req, err := http.NewRequestWithContext(ctx, httpConfig.Request.Method, httpConfig.Request.Url, nil)
 	if err != nil {
-		return fmt.Errorf("failed to create request: %v", err)
+		return fmt.Errorf("failed to create request: %w", err)
 	}
 
 	res, err := httpClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("failed to send request: %v", err)
+		return fmt.Errorf("failed to send request: %w", err)
 	}
 	defer res.Body.Close()
 
-	fmt.Printf("VU %d, msg %d: %d\n", id, msg, res.StatusCode)
+	logEvent := log.Debug().
+		Int("vuId", id).
+		Int("msgId", msg).
+		Str("method", httpConfig.Request.Method).
+		Str("url", httpConfig.Request.Url).
+		Int("code", res.StatusCode)
+
+	if httpConfig.Response.Code == 0 {
+		logEvent.Msg("response")
+		return nil
+	}
+
+	logEvent = logEvent.Int("expectedCode", httpConfig.Response.Code)
+
+	if res.StatusCode != httpConfig.Response.Code {
+		logEvent.Msg("invalid http code")
+		return nil
+	}
+
+	logEvent.Msg("valid http response")
 
 	return nil
 }
