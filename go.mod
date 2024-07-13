@@ -1,6 +1,6 @@
 module github.com/Lameaux/bro
 
-go 1.22
+go 1.20
 
 require (
 	github.com/rs/zerolog v1.33.0
