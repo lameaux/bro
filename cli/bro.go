@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Lameaux/bro/internal/config"
+	"github.com/Lameaux/bro/internal/metrics"
 	"github.com/Lameaux/bro/internal/runner"
 	"github.com/Lameaux/bro/internal/stats"
 	"github.com/rs/zerolog"
@@ -35,6 +36,7 @@ func main() {
 	var showBanner = flag.Bool("banner", true, "show banner")
 	var showStats = flag.Bool("stats", true, "show stats")
 	var configFile = flag.String("config", "", "path to yaml file")
+	var metricsPort = flag.String("metricsPort", "9090", "port for metrics server")
 
 	flag.Parse()
 
@@ -53,7 +55,13 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	handleSignals(cancel)
+	server := metrics.StartServer(*metricsPort)
+	defer metrics.StopServer(ctx, server)
+
+	handleSignals(func() {
+		metrics.StopServer(ctx, server)
+		cancel()
+	})
 
 	c := loadConfig(*configFile)
 
@@ -81,14 +89,14 @@ func loadConfig(configFile string) *config.Config {
 	return c
 }
 
-func handleSignals(cancel context.CancelFunc) {
+func handleSignals(shutdownFn func()) {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
 		sig := <-sigCh
 		log.Info().Str("signal", sig.String()).Msgf("received signal")
-		cancel()
+		shutdownFn()
 	}()
 }
 

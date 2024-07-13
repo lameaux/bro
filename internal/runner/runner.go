@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/Lameaux/bro/internal/config"
+	"github.com/Lameaux/bro/internal/metrics"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
@@ -102,13 +103,17 @@ func runSender(ctx context.Context, scenario config.Scenario, queue <-chan int) 
 }
 
 func doHttpRequest(ctx context.Context, httpClient *http.Client, httpConfig config.Http, id int, msg int) error {
+	metrics.HttpRequestsTotal.Inc()
+
 	req, err := http.NewRequestWithContext(ctx, httpConfig.Request.Method, httpConfig.Request.Url, nil)
 	if err != nil {
+		metrics.HttpRequestsFailedTotal.Inc()
 		return fmt.Errorf("failed to create request: %w", err)
 	}
 
 	res, err := httpClient.Do(req)
 	if err != nil {
+		metrics.HttpRequestsFailedTotal.Inc()
 		return fmt.Errorf("failed to send request: %w", err)
 	}
 	defer res.Body.Close()
@@ -128,6 +133,7 @@ func doHttpRequest(ctx context.Context, httpClient *http.Client, httpConfig conf
 	logEvent = logEvent.Int("expectedCode", httpConfig.Response.Code)
 
 	if res.StatusCode != httpConfig.Response.Code {
+		metrics.HttpRequestsFailedTotal.Inc()
 		logEvent.Msg("invalid http code")
 		return nil
 	}

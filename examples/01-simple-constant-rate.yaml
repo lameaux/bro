@@ -5,16 +5,16 @@ scenarios:
     rate: 10
     interval: 1s
     vus: 10
-    duration: 5s
+    duration: 15s
     http:
       client:
         disableKeepAlive: true
-        timeout: 10s
+        timeout: 1s
       request:
-        url: http://0.0.0.0:8080/static
+        url: http://0.0.0.0:8080/random
         method: get
       response:
-        code: 202
+        code: 200
     thresholds:
       latency:
         - p: 99
