@@ -9,20 +9,22 @@ import (
 	"github.com/Lameaux/bro/internal/stats"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"os"
+	"text/tabwriter"
 	"time"
 )
 
 func Run(ctx context.Context, conf *config.Config, showStats bool) {
-	results := RunScenarios(ctx, conf)
+	results := runScenarios(ctx, conf)
 
-	ProcessResults(results)
+	processResults(results)
 
 	if showStats {
-		PrintStats(results)
+		printStats(conf, results)
 	}
 }
 
-func RunScenarios(ctx context.Context, conf *config.Config) *stats.Stats {
+func runScenarios(ctx context.Context, conf *config.Config) *stats.Stats {
 	httpClient := httpclient.New(conf.HttpClient)
 
 	log.Info().
@@ -48,15 +50,38 @@ func RunScenarios(ctx context.Context, conf *config.Config) *stats.Stats {
 	return results
 }
 
-func ProcessResults(results *stats.Stats) {
+func processResults(results *stats.Stats) {
 	totalDuration := results.EndTime.Sub(results.StartTime)
 	log.Info().Dur("totalDuration", totalDuration).Msg("results")
 }
 
-func PrintStats(results *stats.Stats) {
-	fmt.Printf("total duration: %v\n", results.EndTime.Sub(results.StartTime))
-	for scenario, counters := range results.RequestCounters {
-		fmt.Printf("%s: %v\n", scenario, counters)
+func printStats(conf *config.Config, results *stats.Stats) {
+	fmt.Printf("Total duration: %v\n", results.EndTime.Sub(results.StartTime))
+
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.Debug)
+	_, _ = fmt.Fprintln(w, "Scenario\tTotal Requests\tSent\tFailed\tTimed Out\tSuccessful\tInvalid\t")
+
+	for _, scenario := range conf.Scenarios {
+		counters, ok := results.RequestCounters[scenario.Name]
+		if !ok {
+			log.Warn().
+				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
+				Msg("missing stats")
+			continue
+		}
+
+		_, _ = fmt.Fprintf(
+			w,
+			"%s\t%d\t%d\t%d\t%d\t%d\t%d\t\n",
+			scenario.Name,
+			counters.Total.Load(),
+			counters.Sent.Load(),
+			counters.Failed.Load(),
+			counters.TimedOut.Load(),
+			counters.Success.Load(),
+			counters.Invalid.Load(),
+		)
 	}
 
+	_ = w.Flush()
 }

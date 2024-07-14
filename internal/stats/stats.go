@@ -24,4 +24,5 @@ type RequestCounters struct {
 	Failed   atomic.Int64
 	TimedOut atomic.Int64
 	Success  atomic.Int64
+	Invalid  atomic.Int64
 }

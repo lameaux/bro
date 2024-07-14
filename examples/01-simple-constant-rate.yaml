@@ -6,9 +6,9 @@ httpClient:
   timeout: 2s
 scenarios:
   - name: Constant rate demo
-    rate: 10
+    rate: 100
     interval: 1s
-    vus: 10
+    vus: 20
     duration: 15s
     request:
       url: http://0.0.0.0:8080/random

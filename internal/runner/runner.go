@@ -142,12 +142,15 @@ func (r *Runner) sendRequest(ctx context.Context) (*http.Response, error) {
 		"method":   r.scenario.Request.Method,
 		"url":      r.scenario.Request.Url,
 	}
+
 	metrics.HttpRequestsTotal.With(labels).Inc()
+	r.requestCounters.Sent.Add(1)
 
 	req, err := http.NewRequestWithContext(ctx, r.scenario.Request.Method, r.scenario.Request.Url, nil)
 	if err != nil {
 		labels["reason"] = "invalid"
 		metrics.HttpRequestsFailedTotal.With(labels).Inc()
+		r.requestCounters.Failed.Add(1)
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
@@ -155,8 +158,10 @@ func (r *Runner) sendRequest(ctx context.Context) (*http.Response, error) {
 	if err != nil {
 		if urlErr, ok := err.(*url.Error); ok && urlErr.Timeout() {
 			labels["reason"] = "timeout"
+			r.requestCounters.TimedOut.Add(1)
 		} else {
 			labels["reason"] = "unknown"
+			r.requestCounters.Failed.Add(1)
 		}
 
 		metrics.HttpRequestsFailedTotal.With(labels).Inc()
@@ -203,6 +208,12 @@ func (r *Runner) validateResponse(ctx context.Context, response *http.Response) 
 	labels["success"] = strconv.FormatBool(success)
 
 	metrics.HttpResponsesTotal.With(labels).Inc()
+	if success {
+		r.requestCounters.Success.Add(1)
+	} else {
+		r.requestCounters.Invalid.Add(1)
+	}
+
 	logEvent.Msg("response")
 
 	return nil
