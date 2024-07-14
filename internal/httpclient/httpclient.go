@@ -1,4 +1,4 @@
-package runner
+package httpclient
 
 import (
 	"github.com/Lameaux/bro/internal/config"
@@ -6,14 +6,16 @@ import (
 	"net/http"
 )
 
-func NewHttpClient(reqConfig config.HttpClient) *http.Client {
+func New(reqConfig config.HttpClient) *http.Client {
 	log.Debug().
 		Bool("disableKeepAlive", reqConfig.DisableKeepAlive).
 		Dur("timeout", reqConfig.Timeout).
 		Msg("creating http client")
 
 	tr := &http.Transport{
-		DisableKeepAlives: reqConfig.DisableKeepAlive,
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 100,
+		DisableKeepAlives:   reqConfig.DisableKeepAlive,
 	}
 
 	client := &http.Client{

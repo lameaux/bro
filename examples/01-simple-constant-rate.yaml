@@ -1,20 +1,19 @@
 name: Simple Constant Rate Example
 execution: serial
+httpClient:
+  disableKeepAlive: true
+  timeout: 1s
 scenarios:
   - name: Constant rate demo
     rate: 10
     interval: 1s
     vus: 10
     duration: 15s
-    http:
-      client:
-        disableKeepAlive: true
-        timeout: 1s
-      request:
-        url: http://0.0.0.0:8080/random
-        method: get
-      response:
-        code: 200
+    request:
+      url: http://0.0.0.0:8080/random
+      method: get
+    response:
+      code: 200
     thresholds:
       latency:
         - p: 99

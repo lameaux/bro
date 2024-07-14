@@ -10,30 +10,33 @@ import (
 )
 
 var (
-	HttpRequestsTotal = prometheus.NewCounter(
+	HttpRequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_total",
 			Help: "Total number of HTTP requests",
 		},
+		[]string{"scenario", "method", "url"},
 	)
-	HttpRequestsFailedTotal = prometheus.NewCounter(
+	HttpRequestsFailedTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name: "http_requests_failed_total",
 			Help: "Number of failed HTTP requests",
 		},
+		[]string{"scenario", "method", "url", "reason"},
 	)
-	HttpRequestsTimedOutTotal = prometheus.NewCounter(
+	HttpResponsesTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name: "http_requests_timed_out_total",
-			Help: "Number of timed out HTTP requests",
+			Name: "http_responses_total",
+			Help: "Number of HTTP responses",
 		},
+		[]string{"scenario", "method", "url", "code", "success"},
 	)
 )
 
 func init() {
 	prometheus.MustRegister(HttpRequestsTotal)
 	prometheus.MustRegister(HttpRequestsFailedTotal)
-	prometheus.MustRegister(HttpRequestsTimedOutTotal)
+	prometheus.MustRegister(HttpResponsesTotal)
 }
 
 func StartServer(port string) *http.Server {

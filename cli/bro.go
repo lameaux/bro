@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/Lameaux/bro/internal/config"
+	"github.com/Lameaux/bro/internal/httpclient"
 	"github.com/Lameaux/bro/internal/metrics"
 	"github.com/Lameaux/bro/internal/runner"
 	"github.com/Lameaux/bro/internal/stats"
@@ -63,9 +64,9 @@ func main() {
 		cancel()
 	})
 
-	c := loadConfig(*configFile)
+	conf := loadConfig(*configFile)
 
-	results := runScenarios(ctx, c)
+	results := runScenarios(ctx, conf)
 
 	processResults(results)
 
@@ -100,16 +101,23 @@ func handleSignals(shutdownFn func()) {
 	}()
 }
 
-func runScenarios(ctx context.Context, c *config.Config) stats.Stats {
-	log.Info().Msg("executing scenarios... press Ctrl+C (SIGINT) or send SIGTERM to terminate.")
+func runScenarios(ctx context.Context, conf *config.Config) stats.Stats {
+	log.Info().
+		Str("execution", conf.Execution).
+		Msg("executing scenarios... press Ctrl+C (SIGINT) or send SIGTERM to terminate.")
+
+	httpClient := httpclient.New(conf.HttpClient)
 
 	var results stats.Stats
 	results.StartTime = time.Now()
 
-	for _, scenario := range c.Scenarios {
-		err := runner.RunScenario(ctx, scenario)
+	for _, scenario := range conf.Scenarios {
+		r := runner.New(httpClient, scenario)
+		err := r.Run(ctx)
 		if err != nil {
-			log.Fatal().Err(err).Str("scenarioName", scenario.Name).Msgf("failed to run scenario")
+			log.Fatal().Err(err).
+				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
+				Msgf("failed to run scenario")
 		}
 	}
 

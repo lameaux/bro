@@ -8,9 +8,15 @@ import (
 )
 
 type Config struct {
-	Name      string     `yaml:"name"`
-	Execution string     `yaml:"execution"`
-	Scenarios []Scenario `yaml:"scenarios"`
+	Name       string     `yaml:"name"`
+	Execution  string     `yaml:"execution"`
+	HttpClient HttpClient `yaml:"httpClient"`
+	Scenarios  []Scenario `yaml:"scenarios"`
+}
+
+type HttpClient struct {
+	DisableKeepAlive bool          `yaml:"disableKeepAlive"`
+	Timeout          time.Duration `yaml:"timeout"`
 }
 
 type Scenario struct {
@@ -19,19 +25,9 @@ type Scenario struct {
 	Interval   time.Duration `yaml:"interval"`
 	VUs        int           `yaml:"vus"`
 	Duration   time.Duration `yaml:"duration"`
-	Http       Http          `yaml:"http"`
+	Request    HttpRequest   `yaml:"request"`
+	Response   HttpResponse  `yaml:"response"`
 	Thresholds Thresholds    `yaml:"thresholds"`
-}
-
-type Http struct {
-	Client   HttpClient   `yaml:"client"`
-	Request  HttpRequest  `yaml:"request"`
-	Response HttpResponse `yaml:"response"`
-}
-
-type HttpClient struct {
-	DisableKeepAlive bool          `yaml:"disableKeepAlive"`
-	Timeout          time.Duration `yaml:"timeout"`
 }
 
 type HttpRequest struct {
