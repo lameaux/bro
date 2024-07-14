@@ -15,8 +15,9 @@ type Config struct {
 }
 
 type HttpClient struct {
-	DisableKeepAlive bool          `yaml:"disableKeepAlive"`
-	Timeout          time.Duration `yaml:"timeout"`
+	MaxIdleConnsPerHost int           `yaml:"maxIdleConnsPerHost"`
+	DisableKeepAlive    bool          `yaml:"disableKeepAlive"`
+	Timeout             time.Duration `yaml:"timeout"`
 }
 
 type Scenario struct {

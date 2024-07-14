@@ -97,10 +97,10 @@ func (r *Runner) runSender(ctx context.Context, queue <-chan int) error {
 						return nil
 					}
 
-					withValues := context.WithValue(ctx, contextKey("vuId"), vuId)
-					withValues = context.WithValue(withValues, contextKey("msgId"), msgId)
+					ctxWithValues := context.WithValue(ctx, contextKey("vuId"), vuId)
+					ctxWithValues = context.WithValue(ctxWithValues, contextKey("msgId"), msgId)
 
-					resp, err := r.sendRequest(withValues)
+					resp, err := r.sendRequest(ctxWithValues)
 					if err != nil {
 						log.Debug().
 							Int("vuId", vuId).
@@ -110,7 +110,7 @@ func (r *Runner) runSender(ctx context.Context, queue <-chan int) error {
 						continue
 					}
 
-					if err = r.validateResponse(ctx, resp); err != nil {
+					if err = r.validateResponse(ctxWithValues, resp); err != nil {
 						log.Debug().
 							Int("vuId", vuId).
 							Int("msgId", msgId).

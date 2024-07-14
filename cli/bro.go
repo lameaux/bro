@@ -4,17 +4,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"github.com/Lameaux/bro/internal/app"
 	"github.com/Lameaux/bro/internal/config"
-	"github.com/Lameaux/bro/internal/httpclient"
 	"github.com/Lameaux/bro/internal/metrics"
-	"github.com/Lameaux/bro/internal/runner"
-	"github.com/Lameaux/bro/internal/stats"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 )
 
 const (
@@ -26,8 +23,8 @@ const (
  | |_) | | | (_) |
  |_.__/|_|  \___/ 
 `
-	app     = "bro"
-	version = "v0.0.1"
+	appName    = "bro"
+	appVersion = "v0.0.1"
 )
 
 var GitHash string
@@ -51,7 +48,7 @@ func main() {
 		fmt.Print(logo)
 	}
 
-	log.Info().Str("version", version).Str("build", GitHash).Msg(app)
+	log.Info().Str("version", appVersion).Str("build", GitHash).Msg(appName)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -66,18 +63,12 @@ func main() {
 
 	conf := loadConfig(*configFile)
 
-	results := runScenarios(ctx, conf)
-
-	processResults(results)
-
-	if *showStats {
-		printStats(results)
-	}
+	app.Run(ctx, conf, *showStats)
 }
 
 func loadConfig(configFile string) *config.Config {
 	if configFile == "" {
-		log.Fatal().Msgf("--config parameter is missing. Example: %s --config myconfig.yaml", app)
+		log.Fatal().Msgf("--config parameter is missing. Example: %s --config myconfig.yaml", appName)
 	}
 
 	c, err := config.LoadFromFile(configFile)
@@ -99,39 +90,4 @@ func handleSignals(shutdownFn func()) {
 		log.Info().Str("signal", sig.String()).Msgf("received signal")
 		shutdownFn()
 	}()
-}
-
-func runScenarios(ctx context.Context, conf *config.Config) stats.Stats {
-	log.Info().
-		Str("execution", conf.Execution).
-		Msg("executing scenarios... press Ctrl+C (SIGINT) or send SIGTERM to terminate.")
-
-	httpClient := httpclient.New(conf.HttpClient)
-
-	var results stats.Stats
-	results.StartTime = time.Now()
-
-	for _, scenario := range conf.Scenarios {
-		r := runner.New(httpClient, scenario)
-		err := r.Run(ctx)
-		if err != nil {
-			log.Fatal().Err(err).
-				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
-				Msgf("failed to run scenario")
-		}
-	}
-
-	results.EndTime = time.Now()
-
-	return results
-}
-
-func processResults(results stats.Stats) {
-	totalDuration := results.EndTime.Sub(results.StartTime)
-	log.Info().Dur("totalDuration", totalDuration).Msg("results")
-}
-
-func printStats(results stats.Stats) {
-	fmt.Printf("test duration: %v\n", results.EndTime.Sub(results.StartTime))
-
 }

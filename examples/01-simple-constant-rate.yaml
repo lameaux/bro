@@ -1,8 +1,9 @@
 name: Simple Constant Rate Example
 execution: serial
 httpClient:
+  maxIdleConnsPerHost: 100
   disableKeepAlive: true
-  timeout: 1s
+  timeout: 2s
 scenarios:
   - name: Constant rate demo
     rate: 10

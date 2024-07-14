@@ -6,21 +6,21 @@ import (
 	"net/http"
 )
 
-func New(reqConfig config.HttpClient) *http.Client {
+func New(conf config.HttpClient) *http.Client {
 	log.Debug().
-		Bool("disableKeepAlive", reqConfig.DisableKeepAlive).
-		Dur("timeout", reqConfig.Timeout).
+		Bool("disableKeepAlive", conf.DisableKeepAlive).
+		Dur("timeout", conf.Timeout).
+		Int("maxIdleConnsPerHost", conf.MaxIdleConnsPerHost).
 		Msg("creating http client")
 
 	tr := &http.Transport{
-		MaxIdleConns:        100,
-		MaxIdleConnsPerHost: 100,
-		DisableKeepAlives:   reqConfig.DisableKeepAlive,
+		MaxIdleConnsPerHost: conf.MaxIdleConnsPerHost,
+		DisableKeepAlives:   conf.DisableKeepAlive,
 	}
 
 	client := &http.Client{
 		Transport: tr,
-		Timeout:   reqConfig.Timeout,
+		Timeout:   conf.Timeout,
 	}
 
 	return client
