@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/Lameaux/bro/internal/config"
 	"github.com/Lameaux/bro/internal/metrics"
+	"github.com/Lameaux/bro/internal/stats"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -19,15 +20,19 @@ import (
 type contextKey string
 
 type Runner struct {
-	httpClient *http.Client
-	scenario   config.Scenario
+	httpClient      *http.Client
+	scenario        config.Scenario
+	requestCounters stats.RequestCounters
 }
 
 func New(httpClient *http.Client, scenario config.Scenario) *Runner {
-	return &Runner{httpClient: httpClient, scenario: scenario}
+	return &Runner{
+		httpClient: httpClient,
+		scenario:   scenario,
+	}
 }
 
-func (r *Runner) Run(ctx context.Context) error {
+func (r *Runner) Run(ctx context.Context) (*stats.RequestCounters, error) {
 	log.Info().Dict(
 		"scenario",
 		zerolog.Dict().
@@ -43,7 +48,11 @@ func (r *Runner) Run(ctx context.Context) error {
 	cancel := r.startGenerator(ctx, queue)
 	defer cancel()
 
-	return r.runSender(ctx, queue)
+	if err := r.runSender(ctx, queue); err != nil {
+		return nil, fmt.Errorf("failed sending requests: %w", err)
+	}
+
+	return &r.requestCounters, nil
 }
 
 func (r *Runner) startGenerator(ctx context.Context, queue chan<- int) func() {
@@ -56,6 +65,7 @@ func (r *Runner) startGenerator(ctx context.Context, queue chan<- int) func() {
 		generate := func() {
 			for i := 0; i < r.scenario.Rate; i++ {
 				num++
+				r.requestCounters.Total.Add(1)
 				queue <- num
 			}
 		}

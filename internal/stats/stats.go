@@ -5,14 +5,23 @@ import (
 	"time"
 )
 
-type Stats struct {
-	StartTime    time.Time
-	EndTime      time.Time
-	ScenarioStat []ScenarioStat
+func New() *Stats {
+	return &Stats{
+		StartTime:       time.Now(),
+		RequestCounters: make(map[string]*RequestCounters),
+	}
 }
 
-type ScenarioStat struct {
-	TotalRequests    atomic.Int64
-	FailedRequests   atomic.Int64
-	TimedOutRequests atomic.Int64
+type Stats struct {
+	StartTime       time.Time
+	EndTime         time.Time
+	RequestCounters map[string]*RequestCounters
+}
+
+type RequestCounters struct {
+	Total    atomic.Int64
+	Sent     atomic.Int64
+	Failed   atomic.Int64
+	TimedOut atomic.Int64
+	Success  atomic.Int64
 }
