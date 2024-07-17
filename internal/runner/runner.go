@@ -22,13 +22,14 @@ type contextKey string
 type Runner struct {
 	httpClient      *http.Client
 	scenario        config.Scenario
-	requestCounters stats.RequestCounters
+	requestCounters *stats.RequestCounters
 }
 
 func New(httpClient *http.Client, scenario config.Scenario) *Runner {
 	return &Runner{
-		httpClient: httpClient,
-		scenario:   scenario,
+		httpClient:      httpClient,
+		scenario:        scenario,
+		requestCounters: stats.NewRequestCounters(),
 	}
 }
 
@@ -43,19 +44,24 @@ func (r *Runner) Run(ctx context.Context) (*stats.RequestCounters, error) {
 			Dur("duration", r.scenario.Duration),
 	).Msg("running scenario")
 
-	queue := make(chan int, r.scenario.VUs)
+	queue := make(chan int, maxInt(r.scenario.VUs, r.scenario.Buffer))
+	stop := make(chan struct{})
 
-	cancel := r.startGenerator(ctx, queue)
+	startTime := time.Now()
+
+	cancel := r.startGenerator(ctx, queue, stop)
 	defer cancel()
 
-	if err := r.runSender(ctx, queue); err != nil {
+	if err := r.runSender(ctx, queue, stop); err != nil {
 		return nil, fmt.Errorf("failed sending requests: %w", err)
 	}
 
-	return &r.requestCounters, nil
+	r.requestCounters.Duration = time.Since(startTime)
+
+	return r.requestCounters, nil
 }
 
-func (r *Runner) startGenerator(ctx context.Context, queue chan<- int) func() {
+func (r *Runner) startGenerator(ctx context.Context, queue chan<- int, stop chan struct{}) func() {
 	durationTicker := time.NewTicker(r.scenario.Duration)
 	rateTicker := time.NewTicker(r.scenario.Interval)
 
@@ -79,6 +85,7 @@ func (r *Runner) startGenerator(ctx context.Context, queue chan<- int) func() {
 				return
 			case <-durationTicker.C:
 				close(queue)
+				close(stop)
 				return
 			case <-rateTicker.C:
 				generate()
@@ -92,13 +99,16 @@ func (r *Runner) startGenerator(ctx context.Context, queue chan<- int) func() {
 	}
 }
 
-func (r *Runner) runSender(ctx context.Context, queue <-chan int) error {
+func (r *Runner) runSender(ctx context.Context, queue <-chan int, stop <-chan struct{}) error {
 	var g errgroup.Group
 	for vu := 0; vu < r.scenario.VUs; vu++ {
 		vuId := vu
 		g.Go(func() error {
 			for {
 				select {
+				case <-stop:
+					log.Debug().Int("vuId", vuId).Msg("shutting down")
+					return nil
 				case <-ctx.Done():
 					return ctx.Err()
 				case msgId, ok := <-queue:
@@ -110,6 +120,7 @@ func (r *Runner) runSender(ctx context.Context, queue <-chan int) error {
 					ctxWithValues := context.WithValue(ctx, contextKey("vuId"), vuId)
 					ctxWithValues = context.WithValue(ctxWithValues, contextKey("msgId"), msgId)
 
+					startTime := time.Now()
 					resp, err := r.sendRequest(ctxWithValues)
 					if err != nil {
 						log.Debug().
@@ -120,7 +131,9 @@ func (r *Runner) runSender(ctx context.Context, queue <-chan int) error {
 						continue
 					}
 
-					if err = r.validateResponse(ctxWithValues, resp); err != nil {
+					latency := time.Since(startTime)
+
+					if err = r.validateResponse(ctxWithValues, resp, latency); err != nil {
 						log.Debug().
 							Int("vuId", vuId).
 							Int("msgId", msgId).
@@ -172,7 +185,7 @@ func (r *Runner) sendRequest(ctx context.Context) (*http.Response, error) {
 	return res, nil
 }
 
-func (r *Runner) validateResponse(ctx context.Context, response *http.Response) error {
+func (r *Runner) validateResponse(ctx context.Context, response *http.Response, latency time.Duration) error {
 	labels := prometheus.Labels{
 		"scenario": r.scenario.Name,
 		"method":   r.scenario.Request.Method,
@@ -194,7 +207,8 @@ func (r *Runner) validateResponse(ctx context.Context, response *http.Response) 
 		Int("msgId", msgId).
 		Str("method", r.scenario.Request.Method).
 		Str("url", r.scenario.Request.Url).
-		Int("code", response.StatusCode)
+		Int("code", response.StatusCode).
+		Int64("latency", latency.Milliseconds())
 
 	labels["code"] = strconv.Itoa(response.StatusCode)
 
@@ -208,13 +222,28 @@ func (r *Runner) validateResponse(ctx context.Context, response *http.Response) 
 	labels["success"] = strconv.FormatBool(success)
 
 	metrics.HttpResponsesTotal.With(labels).Inc()
+
 	if success {
 		r.requestCounters.Success.Add(1)
 	} else {
 		r.requestCounters.Invalid.Add(1)
 	}
 
+	metrics.HttpRequestDurationSec.With(labels).Observe(latency.Seconds())
+
+	if err := r.requestCounters.RecordLatency(latency); err != nil {
+		return fmt.Errorf("failed to record latency: %w", err)
+	}
+
 	logEvent.Msg("response")
 
 	return nil
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+
+	return b
 }

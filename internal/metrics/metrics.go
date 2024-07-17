@@ -31,12 +31,21 @@ var (
 		},
 		[]string{"scenario", "method", "url", "code", "success"},
 	)
+	HttpRequestDurationSec = prometheus.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "Duration of HTTP requests in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"scenario", "method", "url", "code", "success"},
+	)
 )
 
 func init() {
 	prometheus.MustRegister(HttpRequestsTotal)
 	prometheus.MustRegister(HttpRequestsFailedTotal)
 	prometheus.MustRegister(HttpResponsesTotal)
+	prometheus.MustRegister(HttpRequestDurationSec)
 }
 
 func StartServer(port string) *http.Server {

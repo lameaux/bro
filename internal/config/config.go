@@ -24,8 +24,9 @@ type Scenario struct {
 	Name       string        `yaml:"name"`
 	Rate       int           `yaml:"rate"`
 	Interval   time.Duration `yaml:"interval"`
-	VUs        int           `yaml:"vus"`
 	Duration   time.Duration `yaml:"duration"`
+	VUs        int           `yaml:"vus"`
+	Buffer     int           `yaml:"buffer"`
 	Request    HttpRequest   `yaml:"request"`
 	Response   HttpResponse  `yaml:"response"`
 	Thresholds Thresholds    `yaml:"thresholds"`

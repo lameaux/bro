@@ -56,14 +56,15 @@ func processResults(results *stats.Stats) {
 }
 
 func printStats(conf *config.Config, results *stats.Stats) {
-	fmt.Printf("Total duration: %v\n", results.EndTime.Sub(results.StartTime))
+	totalDuration := results.EndTime.Sub(results.StartTime)
+	fmt.Printf("Total duration: %v\n", totalDuration)
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.Debug)
-	_, _ = fmt.Fprintln(w, "Scenario\tTotal Requests\tSent\tFailed\tTimed Out\tSuccessful\tInvalid\t")
+	_, _ = fmt.Fprintln(w, "Scenario\tTotal Requests\tSent\tFailed\tTimed Out\tSuccessful\tInvalid\tLatency (ms) @ P99\tDuration\t")
 
 	for _, scenario := range conf.Scenarios {
-		counters, ok := results.RequestCounters[scenario.Name]
-		if !ok {
+		counters := results.RequestCounters[scenario.Name]
+		if counters == nil {
 			log.Warn().
 				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
 				Msg("missing stats")
@@ -72,7 +73,7 @@ func printStats(conf *config.Config, results *stats.Stats) {
 
 		_, _ = fmt.Fprintf(
 			w,
-			"%s\t%d\t%d\t%d\t%d\t%d\t%d\t\n",
+			"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%v\t\n",
 			scenario.Name,
 			counters.Total.Load(),
 			counters.Sent.Load(),
@@ -80,6 +81,8 @@ func printStats(conf *config.Config, results *stats.Stats) {
 			counters.TimedOut.Load(),
 			counters.Success.Load(),
 			counters.Invalid.Load(),
+			counters.GetLatencyAtPercentile(99),
+			counters.Duration,
 		)
 	}
 

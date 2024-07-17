@@ -2,14 +2,15 @@ name: Simple Constant Rate Example
 execution: serial
 httpClient:
   maxIdleConnsPerHost: 100
-  disableKeepAlive: true
+  disableKeepAlive: false
   timeout: 2s
 scenarios:
   - name: Constant rate demo
-    rate: 100
+    rate: 50
     interval: 1s
-    vus: 20
     duration: 15s
+    vus: 20
+    buffer: 200
     request:
       url: http://0.0.0.0:8080/random
       method: get
