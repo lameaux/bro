@@ -17,3 +17,7 @@ run: build
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR)
+
+.PHONY: wiremock
+wiremock:
+	docker-compose up

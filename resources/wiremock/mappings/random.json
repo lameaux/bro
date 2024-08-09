@@ -1,0 +1,15 @@
+{
+  "request": {
+    "method": "GET",
+    "url": "/random"
+  },
+  "response": {
+    "status": 200,
+    "jsonBody": {},
+    "delayDistribution": {
+      "type": "uniform",
+      "lower": 100,
+      "upper": 500
+    }
+  }
+}
