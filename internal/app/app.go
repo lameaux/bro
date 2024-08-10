@@ -7,10 +7,10 @@ import (
 	"github.com/Lameaux/bro/internal/httpclient"
 	"github.com/Lameaux/bro/internal/runner"
 	"github.com/Lameaux/bro/internal/stats"
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"os"
-	"text/tabwriter"
 	"time"
 )
 
@@ -57,10 +57,11 @@ func processResults(results *stats.Stats) {
 
 func printStats(conf *config.Config, results *stats.Stats) {
 	totalDuration := results.EndTime.Sub(results.StartTime)
-	fmt.Printf("Total duration: %v\n", totalDuration)
+	fmt.Printf("\nTotal duration: %v\n", totalDuration)
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', tabwriter.Debug)
-	_, _ = fmt.Fprintln(w, "Scenario\tTotal Requests\tSent\tFailed\tTimed Out\tSuccessful\tInvalid\tLatency (ms) @ P99\tDuration\t")
+	t := table.NewWriter()
+	t.SetOutputMirror(os.Stdout)
+	t.AppendHeader(table.Row{"Scenario", "Total Requests", "Sent", "Successful", "Failed", "Timeout", "Invalid", "Latency @P99", "Duration"})
 
 	for _, scenario := range conf.Scenarios {
 		counters := results.RequestCounters[scenario.Name]
@@ -71,20 +72,20 @@ func printStats(conf *config.Config, results *stats.Stats) {
 			continue
 		}
 
-		_, _ = fmt.Fprintf(
-			w,
-			"%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%v\t\n",
+		t.AppendRow(table.Row{
 			scenario.Name,
 			counters.Total.Load(),
 			counters.Sent.Load(),
+			counters.Success.Load(),
 			counters.Failed.Load(),
 			counters.TimedOut.Load(),
-			counters.Success.Load(),
 			counters.Invalid.Load(),
-			counters.GetLatencyAtPercentile(99),
-			counters.Duration,
-		)
+			fmt.Sprintf("%d ms", counters.GetLatencyAtPercentile(99)),
+			counters.Duration.String(),
+		})
+
 	}
 
-	_ = w.Flush()
+	t.SetStyle(table.StyleLight)
+	t.Render()
 }

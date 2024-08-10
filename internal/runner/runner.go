@@ -152,14 +152,14 @@ func (r *Runner) runSender(ctx context.Context, queue <-chan int, stop <-chan st
 func (r *Runner) sendRequest(ctx context.Context) (*http.Response, error) {
 	labels := prometheus.Labels{
 		"scenario": r.scenario.Name,
-		"method":   r.scenario.Request.Method,
-		"url":      r.scenario.Request.Url,
+		"method":   r.scenario.HttpRequest.Method,
+		"url":      r.scenario.HttpRequest.Url,
 	}
 
 	metrics.HttpRequestsTotal.With(labels).Inc()
 	r.requestCounters.Sent.Add(1)
 
-	req, err := http.NewRequestWithContext(ctx, r.scenario.Request.Method, r.scenario.Request.Url, nil)
+	req, err := http.NewRequestWithContext(ctx, r.scenario.HttpRequest.Method, r.scenario.HttpRequest.Url, nil)
 	if err != nil {
 		labels["reason"] = "invalid"
 		metrics.HttpRequestsFailedTotal.With(labels).Inc()
@@ -188,8 +188,8 @@ func (r *Runner) sendRequest(ctx context.Context) (*http.Response, error) {
 func (r *Runner) validateResponse(ctx context.Context, response *http.Response, latency time.Duration) error {
 	labels := prometheus.Labels{
 		"scenario": r.scenario.Name,
-		"method":   r.scenario.Request.Method,
-		"url":      r.scenario.Request.Url,
+		"method":   r.scenario.HttpRequest.Method,
+		"url":      r.scenario.HttpRequest.Url,
 	}
 
 	vuId, ok := ctx.Value(contextKey("vuId")).(int)
@@ -205,14 +205,14 @@ func (r *Runner) validateResponse(ctx context.Context, response *http.Response, 
 	logEvent := log.Debug().
 		Int("vuId", vuId).
 		Int("msgId", msgId).
-		Str("method", r.scenario.Request.Method).
-		Str("url", r.scenario.Request.Url).
+		Str("method", r.scenario.HttpRequest.Method).
+		Str("url", r.scenario.HttpRequest.Url).
 		Int("code", response.StatusCode).
 		Int64("latency", latency.Milliseconds())
 
 	labels["code"] = strconv.Itoa(response.StatusCode)
 
-	expectedCode := r.scenario.Response.Code
+	expectedCode := r.scenario.HttpResponse.Code
 	if expectedCode > 0 {
 		logEvent = logEvent.Int("expectedCode", expectedCode)
 	}

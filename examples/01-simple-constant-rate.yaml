@@ -8,13 +8,14 @@ scenarios:
   - name: Constant rate demo
     rate: 50
     interval: 1s
-    duration: 15s
+    duration: 5s
     vus: 20
     buffer: 200
-    request:
+    payloadType: http
+    httpRequest:
       url: http://0.0.0.0:8080/random
       method: get
-    response:
+    httpResponse:
       code: 200
     thresholds:
       latency:

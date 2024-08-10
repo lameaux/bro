@@ -21,15 +21,16 @@ type HttpClient struct {
 }
 
 type Scenario struct {
-	Name       string        `yaml:"name"`
-	Rate       int           `yaml:"rate"`
-	Interval   time.Duration `yaml:"interval"`
-	Duration   time.Duration `yaml:"duration"`
-	VUs        int           `yaml:"vus"`
-	Buffer     int           `yaml:"buffer"`
-	Request    HttpRequest   `yaml:"request"`
-	Response   HttpResponse  `yaml:"response"`
-	Thresholds Thresholds    `yaml:"thresholds"`
+	Name         string        `yaml:"name"`
+	Rate         int           `yaml:"rate"`
+	Interval     time.Duration `yaml:"interval"`
+	Duration     time.Duration `yaml:"duration"`
+	VUs          int           `yaml:"vus"`
+	Buffer       int           `yaml:"buffer"`
+	PayloadType  string        `yaml:"payloadType"`
+	HttpRequest  HttpRequest   `yaml:"httpRequest"`
+	HttpResponse HttpResponse  `yaml:"httpResponse"`
+	Thresholds   Thresholds    `yaml:"thresholds"`
 }
 
 type HttpRequest struct {
