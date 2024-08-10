@@ -11,6 +11,10 @@ all: build
 build:
 	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_FILE) $(SRC_DIR)/**/*.go
 
+.PHONY: install
+install: build
+	mv $(BUILD_FILE) $(GOPATH)/bin
+
 run: build
 	$(BUILD_FILE) $(ARGS)
 

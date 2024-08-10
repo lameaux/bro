@@ -1,0 +1,15 @@
+name: Ping Google
+httpClient:
+  timeout: 5s
+  disableFollowRedirects: true
+scenarios:
+  - name: Check Redirect
+    rate: 1
+    interval: 1s
+    duration: 1s
+    vus: 1
+    httpRequest:
+      url: http://google.com
+      method: GET
+    httpResponse:
+      code: 301

@@ -34,20 +34,22 @@ var GitHash string
 
 func main() {
 	var debug = flag.Bool("debug", false, "enable debug mode")
-	var showBanner = flag.Bool("banner", true, "show banner")
-	var showStats = flag.Bool("stats", true, "show stats")
-	var configFile = flag.String("config", "", "path to yaml file")
+	var silent = flag.Bool("silent", false, "enable silent mode")
+	var skipBanner = flag.Bool("skipBanner", false, "skip banner")
+	var skipResults = flag.Bool("skipResults", false, "skip results")
 	var metricsPort = flag.String("metricsPort", "9090", "port for metrics server")
 
 	flag.Parse()
 
-	if *debug {
+	if *silent {
+		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
+	} else if *debug {
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
 	} else {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
-	if *showBanner {
+	if !*silent && !*skipBanner {
 		fmt.Print(logo)
 	}
 
@@ -64,15 +66,17 @@ func main() {
 		cancel()
 	})
 
-	conf := loadConfig(*configFile)
+	conf := loadConfig(flag.Args())
 
-	app.Run(ctx, conf, *showStats)
+	app.Run(ctx, conf, !*silent && !*skipResults)
 }
 
-func loadConfig(configFile string) *config.Config {
-	if configFile == "" {
-		log.Fatal().Msgf("--config parameter is missing. Example: %s --config myconfig.yaml", appName)
+func loadConfig(args []string) *config.Config {
+	if len(args) == 0 {
+		log.Fatal().Msgf("config location is missing. Example: %s [flags] <config.yaml>", appName)
 	}
+
+	configFile := args[0]
 
 	c, err := config.LoadFromFile(configFile)
 	if err != nil {

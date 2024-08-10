@@ -23,5 +23,11 @@ func New(conf config.HttpClient) *http.Client {
 		Timeout:   conf.Timeout,
 	}
 
+	if conf.DisableFollowRedirects {
+		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		}
+	}
+
 	return client
 }
