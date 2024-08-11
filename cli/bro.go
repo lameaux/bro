@@ -9,6 +9,7 @@ import (
 	"github.com/lameaux/bro/internal/metrics"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
@@ -37,7 +38,7 @@ func main() {
 	var silent = flag.Bool("silent", false, "enable silent mode")
 	var skipBanner = flag.Bool("skipBanner", false, "skip banner")
 	var skipResults = flag.Bool("skipResults", false, "skip results")
-	var metricsPort = flag.String("metricsPort", "9090", "port for metrics server")
+	var metricsPort = flag.String("metricsPort", "", "port for metrics server")
 
 	flag.Parse()
 
@@ -58,11 +59,17 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	server := metrics.StartServer(*metricsPort)
-	defer metrics.StopServer(ctx, server)
+	var metricsServer *http.Server
+	if *metricsPort != "" {
+		metricsServer := metrics.StartServer(*metricsPort)
+		defer metrics.StopServer(ctx, metricsServer)
+	}
 
 	handleSignals(func() {
-		metrics.StopServer(ctx, server)
+		if *metricsPort != "" {
+			metrics.StopServer(ctx, metricsServer)
+		}
+
 		cancel()
 	})
 

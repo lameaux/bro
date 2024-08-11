@@ -5,7 +5,7 @@ BUILD_FILE := $(BUILD_DIR)/$(APP_NAME)
 GIT_HASH := $(shell git rev-parse --short HEAD)
 
 .PHONY: all
-all: build
+all: clean build
 
 .PHONY: build
 build:
@@ -21,7 +21,3 @@ run: build
 .PHONY: clean
 clean:
 	rm -rf $(BUILD_DIR)
-
-.PHONY: wiremock
-wiremock:
-	docker-compose up
