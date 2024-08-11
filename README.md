@@ -9,11 +9,21 @@
 ░░░░░░░░  ░░░░░      ░░░░░░  
 ```
 
-**bro** is a performance testing tool.
+**bro** is a load testing tool.
 
 # About
 
-It is written in Go with test scenarios defined in YAML.
+This tool allows you to execute load testing scenarios to.
+
+It supports constant and variable rate traffic patterns. 
+
+During the execution it collects metrics (e.g. RPS, latency, errors) and validates them
+against defined thresholds. 
+
+It is written in Go, test scenarios are defined in YAML.
+
+Try it together with [mox](https://github.com/lameaux/mox) - a tool to stub external dependencies, so that your
+application can be tested in isolation.
 
 # Installation
 
