@@ -13,7 +13,7 @@
 
 # About
 
-This tool allows you to execute load testing scenarios with constant and variable rate traffic patterns.
+This tool allows you to execute load testing scenarios with both constant and variable rate traffic patterns.
 
 During the execution it collects metrics (e.g. RPS, latency, errors) and validates them
 against defined thresholds. 
