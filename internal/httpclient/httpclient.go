@@ -1,7 +1,7 @@
 package httpclient
 
 import (
-	"github.com/Lameaux/bro/internal/config"
+	"github.com/lameaux/bro/internal/config"
 	"github.com/rs/zerolog/log"
 	"net/http"
 )
