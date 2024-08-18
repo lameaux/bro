@@ -10,6 +10,7 @@ import (
 	"github.com/lameaux/bro/internal/stats"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"math"
 	"os"
 	"time"
 )
@@ -61,7 +62,7 @@ func printStats(conf *config.Config, results *stats.Stats) {
 
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Scenario", "Total Requests", "Sent", "Successful", "Failed", "Timeout", "Invalid", "Latency @P99", "Duration"})
+	t.AppendHeader(table.Row{"Scenario", "Total", "Sent", "Success", "Failed", "Timeout", "Invalid", "Latency @P99", "Duration", "RPS", "Passed"})
 
 	for _, scenario := range conf.Scenarios {
 		counters := results.RequestCounters[scenario.Name]
@@ -72,16 +73,20 @@ func printStats(conf *config.Config, results *stats.Stats) {
 			continue
 		}
 
+		rps := math.Round(float64(counters.Total.Load()) / counters.Duration.Seconds())
+
 		t.AppendRow(table.Row{
 			scenario.Name,
 			counters.Total.Load(),
 			counters.Sent.Load(),
 			counters.Success.Load(),
 			counters.Failed.Load(),
-			counters.TimedOut.Load(),
+			counters.Timeout.Load(),
 			counters.Invalid.Load(),
 			fmt.Sprintf("%d ms", counters.GetLatencyAtPercentile(99)),
-			counters.Duration.String(),
+			counters.Duration,
+			rps,
+			"OK",
 		})
 
 	}

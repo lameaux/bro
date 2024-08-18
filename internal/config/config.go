@@ -31,7 +31,7 @@ type Scenario struct {
 	PayloadType  string        `yaml:"payloadType"`
 	HttpRequest  HttpRequest   `yaml:"httpRequest"`
 	HttpResponse HttpResponse  `yaml:"httpResponse"`
-	Thresholds   Thresholds    `yaml:"thresholds"`
+	Validate     Validate      `yaml:"validate"`
 }
 
 type HttpRequest struct {
@@ -44,7 +44,13 @@ type HttpResponse struct {
 	Code int `yaml:"code"`
 }
 
-type Thresholds struct {
+type Validate struct {
+	Success *Threshold `yaml:"success"`
+	Invalid *Threshold `yaml:"invalid"`
+}
+
+type Threshold struct {
+	Equal int `yaml:"eq"`
 }
 
 func LoadFromFile(fileName string) (*Config, error) {

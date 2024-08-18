@@ -29,12 +29,12 @@ func NewRequestCounters() *RequestCounters {
 type RequestCounters struct {
 	Duration time.Duration
 
-	Total    atomic.Int64
-	Sent     atomic.Int64
-	Failed   atomic.Int64
-	TimedOut atomic.Int64
-	Success  atomic.Int64
-	Invalid  atomic.Int64
+	Total   atomic.Int64
+	Sent    atomic.Int64
+	Success atomic.Int64
+	Failed  atomic.Int64
+	Timeout atomic.Int64
+	Invalid atomic.Int64
 
 	latencyMillis *hdrhistogram.Histogram
 	mu            sync.Mutex

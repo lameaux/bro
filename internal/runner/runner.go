@@ -171,7 +171,7 @@ func (r *Runner) sendRequest(ctx context.Context) (*http.Response, error) {
 	if err != nil {
 		if urlErr, ok := err.(*url.Error); ok && urlErr.Timeout() {
 			labels["reason"] = "timeout"
-			r.requestCounters.TimedOut.Add(1)
+			r.requestCounters.Timeout.Add(1)
 		} else {
 			labels["reason"] = "unknown"
 			r.requestCounters.Failed.Add(1)
@@ -229,6 +229,9 @@ func (r *Runner) validateResponse(ctx context.Context, response *http.Response, 
 	} else {
 		r.requestCounters.Invalid.Add(1)
 		r.requestCounters.Failed.Add(1)
+
+		delete(labels, "code")
+		delete(labels, "success")
 
 		labels["reason"] = "code"
 		metrics.HttpRequestsFailedTotal.With(labels).Inc()

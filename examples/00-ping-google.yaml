@@ -3,13 +3,42 @@ httpClient:
   timeout: 5s
   disableFollowRedirects: true
 scenarios:
-  - name: Check Redirect
+  - name: Check 301 Redirect
     rate: 1
     interval: 1s
     duration: 1s
     vus: 1
     httpRequest:
-      url: http://google.com
+      url: https://google.com
       method: GET
     httpResponse:
       code: 301
+    validate:
+      failed:
+        eq: 0
+  - name: Check 200 OK
+    rate: 1
+    interval: 1s
+    duration: 1s
+    vus: 1
+    httpRequest:
+      url: https://www.google.com
+      method: GET
+    httpResponse:
+      code: 200
+    validate:
+      failed:
+        eq: 0
+  - name: Check Error
+    rate: 1
+    interval: 1s
+    duration: 1s
+    vus: 1
+    httpRequest:
+      url: https://www.google.com/unknown
+      method: GET
+    httpResponse:
+      code: 200
+    validate:
+      failed:
+        eq: 0
