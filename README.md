@@ -15,15 +15,14 @@
 
 This tool allows you to execute load testing scenarios with both constant and variable rate traffic patterns.
 
-During the execution it collects metrics (e.g. RPS, latency, errors) and validates them
-against defined thresholds. 
+During the execution it collects metrics (e.g. RPS, latency, errors) and validates them against defined thresholds. 
 
 It is written in Go, test scenarios are defined in YAML.
 
 Try it together with [mox](https://github.com/lameaux/mox) - a tool to stub external dependencies, so that your
 application can be tested in isolation.
 
-Check out [nft](https://github.com/lameaux/nft) repo for non-functional test examples.
+Check out [nft](https://github.com/lameaux/nft) repo to learn more about bro & mox for non-functional testing.
 
 # Installation
 
