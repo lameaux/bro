@@ -32,3 +32,7 @@ docker-build:
 docker-push:
 	docker tag $(DOCKER_IMAGE):$(GIT_HASH) ghcr.io/$(DOCKER_IMAGE):latest
 	docker push ghcr.io/$(DOCKER_IMAGE):latest
+
+.PHONY: docker-release
+docker-release: docker-build docker-push
+
