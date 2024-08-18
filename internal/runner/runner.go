@@ -222,14 +222,17 @@ func (r *Runner) validateResponse(ctx context.Context, response *http.Response, 
 	labels["success"] = strconv.FormatBool(success)
 
 	metrics.HttpResponsesTotal.With(labels).Inc()
+	metrics.HttpRequestDurationSec.With(labels).Observe(latency.Seconds())
 
 	if success {
 		r.requestCounters.Success.Add(1)
 	} else {
 		r.requestCounters.Invalid.Add(1)
-	}
+		r.requestCounters.Failed.Add(1)
 
-	metrics.HttpRequestDurationSec.With(labels).Observe(latency.Seconds())
+		labels["reason"] = "code"
+		metrics.HttpRequestsFailedTotal.With(labels).Inc()
+	}
 
 	if err := r.requestCounters.RecordLatency(latency); err != nil {
 		return fmt.Errorf("failed to record latency: %w", err)
