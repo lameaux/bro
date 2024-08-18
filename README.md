@@ -23,6 +23,8 @@ It is written in Go, test scenarios are defined in YAML.
 Try it together with [mox](https://github.com/lameaux/mox) - a tool to stub external dependencies, so that your
 application can be tested in isolation.
 
+Check out [nft](https://github.com/lameaux/nft) repo for non-functional test examples.
+
 # Installation
 
 Make sure you have `GOPATH` set up correctly.
@@ -81,6 +83,8 @@ See [examples](./examples) dir for testing examples:
 
 - [Ping Google](./examples/00-ping-google.yaml)
 - [Simple Constant Rate Example](./examples/01-simple-constant-rate.yaml)
+
+Check out [nft](https://github.com/lameaux/nft) repo for more examples.
 
 # Test Configuration
 
