@@ -75,7 +75,7 @@ func main() {
 
 	conf := loadConfig(flag.Args())
 
-	app.Run(ctx, conf, !*silent && !*skipResults)
+	app.Run(ctx, conf, !*skipResults)
 }
 
 func loadConfig(args []string) *config.Config {

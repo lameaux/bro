@@ -53,12 +53,11 @@ func runScenarios(ctx context.Context, conf *config.Config) *stats.Stats {
 
 func processResults(results *stats.Stats) {
 	totalDuration := results.EndTime.Sub(results.StartTime)
-	log.Info().Dur("totalDuration", totalDuration).Msg("results")
+	log.Info().Dur("totalDuration", totalDuration).Bool("ok", true).Msg("results")
 }
 
 func printStats(conf *config.Config, results *stats.Stats) {
 	totalDuration := results.EndTime.Sub(results.StartTime)
-	fmt.Printf("\nTotal duration: %v\n", totalDuration)
 
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
@@ -93,4 +92,7 @@ func printStats(conf *config.Config, results *stats.Stats) {
 
 	t.SetStyle(table.StyleLight)
 	t.Render()
+
+	fmt.Printf("Total duration: %v\n", totalDuration)
+	fmt.Println("OK")
 }
