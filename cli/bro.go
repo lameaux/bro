@@ -90,7 +90,7 @@ func loadConfig(args []string) *config.Config {
 		log.Fatal().Err(err).Msg("error loading config from file")
 	}
 
-	log.Debug().Str("configName", c.Name).Msgf("config loaded")
+	log.Info().Str("configName", c.Name).Str("configFile", configFile).Msgf("config loaded")
 
 	return c
 }

@@ -6,6 +6,8 @@ import (
 	"net/http"
 )
 
+const defaultMaxIdleConnsPerHost = 100
+
 func New(conf config.HttpClient) *http.Client {
 	log.Debug().
 		Bool("disableKeepAlive", conf.DisableKeepAlive).
@@ -13,8 +15,13 @@ func New(conf config.HttpClient) *http.Client {
 		Int("maxIdleConnsPerHost", conf.MaxIdleConnsPerHost).
 		Msg("creating http client")
 
+	maxIdleConnsPerHost := defaultMaxIdleConnsPerHost
+	if conf.MaxIdleConnsPerHost > 0 {
+		maxIdleConnsPerHost = conf.MaxIdleConnsPerHost
+	}
+
 	tr := &http.Transport{
-		MaxIdleConnsPerHost: conf.MaxIdleConnsPerHost,
+		MaxIdleConnsPerHost: maxIdleConnsPerHost,
 		DisableKeepAlives:   conf.DisableKeepAlive,
 	}
 
