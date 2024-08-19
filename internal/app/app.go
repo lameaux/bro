@@ -59,6 +59,8 @@ func processResults(results *stats.Stats) {
 func printStats(conf *config.Config, results *stats.Stats) {
 	totalDuration := results.EndTime.Sub(results.StartTime)
 
+	fmt.Println(conf.Name)
+
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
 	t.AppendHeader(table.Row{"Scenario", "Total", "Sent", "Success", "Failed", "Timeout", "Invalid", "Latency @P99", "Duration", "RPS", "Passed"})
