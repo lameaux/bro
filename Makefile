@@ -17,6 +17,7 @@ build:
 install: build
 	mv $(BUILD_FILE) $(GOPATH)/bin
 
+.PHONY: run
 run: build
 	$(BUILD_FILE) $(ARGS)
 
