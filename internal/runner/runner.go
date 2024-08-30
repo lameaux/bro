@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/lameaux/bro/internal/checker"
 	"github.com/lameaux/bro/internal/config"
 	"github.com/lameaux/bro/internal/metrics"
 	"github.com/lameaux/bro/internal/stats"
@@ -38,13 +39,12 @@ func (r *Runner) Run(ctx context.Context) (*stats.RequestCounters, error) {
 		"scenario",
 		zerolog.Dict().
 			Str("name", r.scenario.Name).
-			Int("rate", r.scenario.Rate).
-			Dur("interval", r.scenario.Interval).
+			Int("rps", r.scenario.RPS).
 			Int("vus", r.scenario.VUs).
 			Dur("duration", r.scenario.Duration),
 	).Msg("running scenario")
 
-	queue := make(chan int, maxInt(r.scenario.VUs, r.scenario.Buffer))
+	queue := make(chan int, max(r.scenario.VUs, r.scenario.Buffer))
 	stop := make(chan struct{})
 
 	startTime := time.Now()
@@ -63,13 +63,13 @@ func (r *Runner) Run(ctx context.Context) (*stats.RequestCounters, error) {
 
 func (r *Runner) startGenerator(ctx context.Context, queue chan<- int, stop chan struct{}) func() {
 	durationTicker := time.NewTicker(r.scenario.Duration)
-	rateTicker := time.NewTicker(r.scenario.Interval)
+	rateTicker := time.NewTicker(1 * time.Second)
 
 	go func() {
 		var num int
 
 		generate := func() {
-			for i := 0; i < r.scenario.Rate; i++ {
+			for i := 0; i < r.scenario.RPS; i++ {
 				num++
 				r.requestCounters.Total.Add(1)
 				queue <- num
@@ -117,30 +117,7 @@ func (r *Runner) runSender(ctx context.Context, queue <-chan int, stop <-chan st
 						return nil
 					}
 
-					ctxWithValues := context.WithValue(ctx, contextKey("vuId"), vuId)
-					ctxWithValues = context.WithValue(ctxWithValues, contextKey("msgId"), msgId)
-
-					startTime := time.Now()
-					resp, err := r.sendRequest(ctxWithValues)
-					if err != nil {
-						log.Debug().
-							Int("vuId", vuId).
-							Int("msgId", msgId).
-							Err(err).
-							Msg("failed to send http request")
-						continue
-					}
-
-					latency := time.Since(startTime)
-
-					if err = r.validateResponse(ctxWithValues, resp, latency); err != nil {
-						log.Debug().
-							Int("vuId", vuId).
-							Int("msgId", msgId).
-							Err(err).
-							Msg("failed to validate http response")
-					}
-
+					r.processMessage(ctx, vuId, msgId)
 				}
 			}
 		})
@@ -149,57 +126,146 @@ func (r *Runner) runSender(ctx context.Context, queue <-chan int, stop <-chan st
 	return g.Wait()
 }
 
-func (r *Runner) sendRequest(ctx context.Context) (*http.Response, error) {
-	labels := prometheus.Labels{
-		"scenario": r.scenario.Name,
-		"method":   r.scenario.HttpRequest.Method,
-		"url":      r.scenario.HttpRequest.Url,
+func (r *Runner) processMessage(ctx context.Context, vuId int, msgId int) {
+	ctxWithValues := context.WithValue(ctx, contextKey("vuId"), vuId)
+	ctxWithValues = context.WithValue(ctxWithValues, contextKey("msgId"), msgId)
+
+	startTime := time.Now()
+	resp, err := r.sendRequest(ctxWithValues)
+	if err != nil {
+		log.Debug().
+			Int("vuId", vuId).
+			Int("msgId", msgId).
+			Err(err).
+			Msg("failed to send http request")
+		return
+	}
+	defer resp.Body.Close()
+
+	latency := time.Since(startTime)
+
+	if err = r.runChecks(ctxWithValues, resp, latency); err != nil {
+		log.Debug().
+			Int("vuId", vuId).
+			Int("msgId", msgId).
+			Err(err).
+			Msg("failed to run checks")
 	}
 
-	metrics.HttpRequestsTotal.With(labels).Inc()
-	r.requestCounters.Sent.Add(1)
+	// validate threshold
+	// TODO
+}
 
-	req, err := http.NewRequestWithContext(ctx, r.scenario.HttpRequest.Method, r.scenario.HttpRequest.Url, nil)
+func (r *Runner) sendRequest(ctx context.Context) (*http.Response, error) {
+	r.requestCounters.Sent.Add(1)
+	metrics.HttpRequestsTotal.With(r.requestLabels()).Inc()
+
+	req, err := http.NewRequestWithContext(
+		ctx,
+		r.scenario.HttpRequest.Method,
+		r.scenario.HttpRequest.Url,
+		r.scenario.HttpRequest.BodyReader(),
+	)
 	if err != nil {
-		labels["reason"] = "invalid"
-		metrics.HttpRequestsFailedTotal.With(labels).Inc()
 		r.requestCounters.Failed.Add(1)
+		r.countFailedRequest("format")
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	res, err := r.httpClient.Do(req)
 	if err != nil {
 		if urlErr, ok := err.(*url.Error); ok && urlErr.Timeout() {
-			labels["reason"] = "timeout"
 			r.requestCounters.Timeout.Add(1)
+			r.countFailedRequest("timeout")
 		} else {
-			labels["reason"] = "unknown"
 			r.requestCounters.Failed.Add(1)
+			r.countFailedRequest("unknown")
 		}
 
-		metrics.HttpRequestsFailedTotal.With(labels).Inc()
 		return nil, fmt.Errorf("failed to send request: %w", err)
 	}
-	defer res.Body.Close()
 
 	return res, nil
 }
 
-func (r *Runner) validateResponse(ctx context.Context, response *http.Response, latency time.Duration) error {
-	labels := prometheus.Labels{
+func (r *Runner) runChecks(ctx context.Context, response *http.Response, latency time.Duration) error {
+	logEvent, err := r.makeLogEvent(ctx, response, latency)
+	if err != nil {
+		return fmt.Errorf("failed to make LogEvent: %w", err)
+	}
+
+	success := true
+	checkResults := zerolog.Arr()
+	for _, check := range r.scenario.Checks {
+		value, ok, err := checker.Run(check, response)
+		checkResults = checkResults.Dict(
+			zerolog.Dict().
+				Str("type", check.Type).
+				Str("name", check.Name).
+				Str("value", value).
+				Bool("ok", ok).
+				Err(err),
+		)
+		if !ok {
+			success = false
+		}
+	}
+
+	logEvent.Array("checks", checkResults)
+
+	if success {
+		r.requestCounters.Success.Add(1)
+	} else {
+		r.requestCounters.Invalid.Add(1)
+		r.requestCounters.Failed.Add(1)
+
+		r.countFailedRequest("code")
+	}
+
+	labels := r.responseLabels(response, success)
+	metrics.HttpResponsesTotal.With(labels).Inc()
+
+	if err = r.requestCounters.RecordLatency(latency); err != nil {
+		return fmt.Errorf("failed to record latency: %w", err)
+	}
+
+	labels = r.responseLabels(response, success)
+	metrics.HttpRequestDurationSec.With(labels).Observe(latency.Seconds())
+
+	logEvent.Bool("success", success).Msg("response")
+
+	return nil
+}
+
+func (r *Runner) requestLabels() prometheus.Labels {
+	return prometheus.Labels{
 		"scenario": r.scenario.Name,
 		"method":   r.scenario.HttpRequest.Method,
 		"url":      r.scenario.HttpRequest.Url,
 	}
+}
 
+func (r *Runner) responseLabels(response *http.Response, success bool) prometheus.Labels {
+	labels := r.requestLabels()
+	labels["code"] = strconv.Itoa(response.StatusCode)
+	labels["success"] = strconv.FormatBool(success)
+
+	return labels
+}
+
+func (r *Runner) makeLogEvent(
+	ctx context.Context,
+	response *http.Response,
+	latency time.Duration,
+) (*zerolog.Event, error) {
 	vuId, ok := ctx.Value(contextKey("vuId")).(int)
 	if !ok {
-		return errors.New("missing vuId")
+		return nil, errors.New("missing vuId")
 	}
 
 	msgId, ok := ctx.Value(contextKey("msgId")).(int)
 	if !ok {
-		return errors.New("missing msgId")
+		return nil, errors.New("missing msgId")
 	}
 
 	logEvent := log.Debug().
@@ -210,46 +276,11 @@ func (r *Runner) validateResponse(ctx context.Context, response *http.Response, 
 		Int("code", response.StatusCode).
 		Int64("latency", latency.Milliseconds())
 
-	labels["code"] = strconv.Itoa(response.StatusCode)
-
-	expectedCode := r.scenario.HttpResponse.Code
-	if expectedCode > 0 {
-		logEvent = logEvent.Int("expectedCode", expectedCode)
-	}
-
-	success := expectedCode == 0 || response.StatusCode == expectedCode
-	logEvent = logEvent.Bool("success", success)
-	labels["success"] = strconv.FormatBool(success)
-
-	metrics.HttpResponsesTotal.With(labels).Inc()
-	metrics.HttpRequestDurationSec.With(labels).Observe(latency.Seconds())
-
-	if success {
-		r.requestCounters.Success.Add(1)
-	} else {
-		r.requestCounters.Invalid.Add(1)
-		r.requestCounters.Failed.Add(1)
-
-		delete(labels, "code")
-		delete(labels, "success")
-
-		labels["reason"] = "code"
-		metrics.HttpRequestsFailedTotal.With(labels).Inc()
-	}
-
-	if err := r.requestCounters.RecordLatency(latency); err != nil {
-		return fmt.Errorf("failed to record latency: %w", err)
-	}
-
-	logEvent.Msg("response")
-
-	return nil
+	return logEvent, nil
 }
 
-func maxInt(a, b int) int {
-	if a > b {
-		return a
-	}
-
-	return b
+func (r *Runner) countFailedRequest(reason string) {
+	labels := r.requestLabels()
+	labels["reason"] = reason
+	metrics.HttpRequestsFailedTotal.With(labels).Inc()
 }

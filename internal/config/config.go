@@ -3,7 +3,9 @@ package config
 import (
 	"fmt"
 	"gopkg.in/yaml.v3"
+	"io"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -22,16 +24,15 @@ type HttpClient struct {
 }
 
 type Scenario struct {
-	Name         string        `yaml:"name"`
-	Rate         int           `yaml:"rate"`
-	Interval     time.Duration `yaml:"interval"`
-	Duration     time.Duration `yaml:"duration"`
-	VUs          int           `yaml:"vus"`
-	Buffer       int           `yaml:"buffer"`
-	PayloadType  string        `yaml:"payloadType"`
-	HttpRequest  HttpRequest   `yaml:"httpRequest"`
-	HttpResponse HttpResponse  `yaml:"httpResponse"`
-	Validate     Validate      `yaml:"validate"`
+	Name        string        `yaml:"name"`
+	RPS         int           `yaml:"rps"`
+	Duration    time.Duration `yaml:"duration"`
+	VUs         int           `yaml:"vus"`
+	Buffer      int           `yaml:"buffer"`
+	PayloadType string        `yaml:"payloadType"`
+	HttpRequest HttpRequest   `yaml:"httpRequest"`
+	Checks      []Check       `yaml:"checks"`
+	Thresholds  []Threshold   `yaml:"thresholds"`
 }
 
 type HttpRequest struct {
@@ -40,17 +41,34 @@ type HttpRequest struct {
 	Body   *string `yaml:"body"`
 }
 
-type HttpResponse struct {
-	Code int `yaml:"code"`
+func (r HttpRequest) BodyReader() io.Reader {
+	if r.Body != nil {
+		return strings.NewReader(*r.Body)
+	}
+
+	return nil
 }
 
-type Validate struct {
-	Success *Threshold `yaml:"success"`
-	Invalid *Threshold `yaml:"invalid"`
+type Check struct {
+	Type     string `yaml:"type"`
+	Name     string `yaml:"name"`
+	Equals   string `yaml:"equals"`
+	Contains string `yaml:"contains"`
+	Matches  string `yaml:"matches"`
 }
 
 type Threshold struct {
-	Equal int `yaml:"eq"`
+	Type string `yaml:"type"`
+	Name string `yaml:"name"`
+
+	MinCount int `yaml:"minCount"`
+	MaxCount int `yaml:"maxCount"`
+
+	MinValue string `yaml:"minValue"`
+	MaxValue string `yaml:"maxValue"`
+
+	MinRate string `yaml:"minRate"`
+	MaxRate string `yaml:"maxRate"`
 }
 
 func LoadFromFile(fileName string) (*Config, error) {

@@ -97,8 +97,7 @@ httpClient:
   disableFollowRedirects: true # bool  
 scenarios: # list
   - name: Example Scenario # Constant rate demo
-    rate: 50 # int
-    interval: 1s # duration
+    rps: 50 # int
     duration: 15s # duration
     vus: 20 # int
     buffer: 200 # int
@@ -106,11 +105,13 @@ scenarios: # list
     httpRequest:
       url: http://0.0.0.0:8080/random # url
       method: get # get, post, head, delete, etc.
-    httpResponse:
-      code: 200 # int
-    validate:
-      failed:
-        eq: 0 # int
+    checks:
+      - type: httpCode
+        eq: 200 # int
+    thresholds:
+      - name: check
+        type: httpCode
+        minRate: 1.0 # float
 ```
 
 

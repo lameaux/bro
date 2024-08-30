@@ -4,41 +4,47 @@ httpClient:
   disableFollowRedirects: true
 scenarios:
   - name: Check 301 Redirect
-    rate: 1
-    interval: 1s
+    rps: 1
     duration: 1s
     vus: 1
     httpRequest:
       url: https://google.com
       method: GET
-    httpResponse:
-      code: 301
-    validate:
-      failed:
-        eq: 0
+    checks:
+      - type: httpCode
+        equals: 301
+    thresholds:
+      - type: check
+        name: httpCode
+        minCount: 1
+        maxCount: 1
   - name: Check 200 OK
-    rate: 1
-    interval: 1s
+    rps: 2
     duration: 1s
-    vus: 1
+    vus: 2
     httpRequest:
       url: https://www.google.com
       method: GET
-    httpResponse:
-      code: 200
-    validate:
-      failed:
-        eq: 0
+    checks:
+      - type: httpCode
+        equals: 200
+    thresholds:
+      - type: check
+        name: httpCode
+        minRate: 1.0
+        maxRate: 1.0
   - name: Check Error
-    rate: 1
-    interval: 1s
+    rps: 1
     duration: 1s
     vus: 1
     httpRequest:
       url: https://www.google.com/unknown
       method: GET
-    httpResponse:
-      code: 200
-    validate:
-      failed:
-        eq: 0
+    checks:
+      - type: httpCode
+        equals: 200
+    thresholds:
+      - type: check
+        name: httpCode
+        minCount: 0
+        maxCount: 0

@@ -1,23 +1,23 @@
 name: Simple Constant Rate Example
 execution: serial
 httpClient:
-  maxIdleConnsPerHost: 100
-  disableKeepAlive: false
-  timeout: 2s
+  timeout: 1s
 scenarios:
   - name: Constant rate demo
-    rate: 50
+    rate: 1000
     interval: 1s
     duration: 5s
-    vus: 20
-    buffer: 200
-    payloadType: http
+    vus: 100
     httpRequest:
       url: http://0.0.0.0:8080/static
       method: get
-    httpResponse:
-      code: 200
+    checks:
+      - type: httpCode
+        equals: 200
     thresholds:
-      latency:
-        - p: 99
-          v: 500
+      - type: check
+        name: httpCode
+        minRate: 0.99
+      - type: latency
+        name: p99
+        maxValue: 100ms
