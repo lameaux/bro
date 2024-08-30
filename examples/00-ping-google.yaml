@@ -9,7 +9,6 @@ scenarios:
     vus: 1
     httpRequest:
       url: https://google.com
-      method: GET
     checks:
       - type: httpCode
         equals: 301
@@ -27,7 +26,6 @@ scenarios:
     vus: 2
     httpRequest:
       url: https://www.google.com
-      method: GET
     checks:
       - type: httpCode
         equals: 200
@@ -44,7 +42,6 @@ scenarios:
     vus: 1
     httpRequest:
       url: https://www.google.com/unknown
-      method: GET
     checks:
       - type: httpCode
         equals: 404

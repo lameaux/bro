@@ -162,7 +162,7 @@ func (r *Runner) sendRequest(ctx context.Context) (*http.Response, error) {
 
 	req, err := http.NewRequestWithContext(
 		ctx,
-		r.scenario.HttpRequest.Method,
+		r.scenario.HttpRequest.Method(),
 		r.scenario.HttpRequest.Url,
 		r.scenario.HttpRequest.BodyReader(),
 	)
@@ -240,7 +240,7 @@ func (r *Runner) runChecks(ctx context.Context, response *http.Response, latency
 func (r *Runner) requestLabels() prometheus.Labels {
 	return prometheus.Labels{
 		"scenario": r.scenario.Name,
-		"method":   r.scenario.HttpRequest.Method,
+		"method":   r.scenario.HttpRequest.Method(),
 		"url":      r.scenario.HttpRequest.Url,
 	}
 }
@@ -271,7 +271,7 @@ func (r *Runner) makeLogEvent(
 	logEvent := log.Debug().
 		Int("vuId", vuId).
 		Int("msgId", msgId).
-		Str("method", r.scenario.HttpRequest.Method).
+		Str("method", r.scenario.HttpRequest.Method()).
 		Str("url", r.scenario.HttpRequest.Url).
 		Int("code", response.StatusCode).
 		Int64("latency", latency.Milliseconds())

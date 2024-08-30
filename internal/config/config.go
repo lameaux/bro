@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -36,9 +37,17 @@ type Scenario struct {
 }
 
 type HttpRequest struct {
-	Url    string  `yaml:"url"`
-	Method string  `yaml:"method"`
-	Body   *string `yaml:"body"`
+	Url       string  `yaml:"url"`
+	MethodRaw string  `yaml:"method"`
+	Body      *string `yaml:"body"`
+}
+
+func (r HttpRequest) Method() string {
+	if r.MethodRaw == "" {
+		return http.MethodGet
+	}
+
+	return r.MethodRaw
 }
 
 func (r HttpRequest) BodyReader() io.Reader {
