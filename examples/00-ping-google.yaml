@@ -13,6 +13,9 @@ scenarios:
     checks:
       - type: httpCode
         equals: 301
+      - type: httpHeader
+        name: Location
+        equals: https://www.google.com/
     thresholds:
       - type: check
         name: httpCode
@@ -28,6 +31,8 @@ scenarios:
     checks:
       - type: httpCode
         equals: 200
+      - type: httpBody
+        contains: <title>Google</title>
     thresholds:
       - type: check
         name: httpCode
@@ -42,9 +47,11 @@ scenarios:
       method: GET
     checks:
       - type: httpCode
-        equals: 200
+        equals: 404
+      - type: httpBody
+        contains: <title>Error 404 (Not Found)!!1</title>
     thresholds:
       - type: check
         name: httpCode
-        minCount: 0
-        maxCount: 0
+        minCount: 1
+        maxCount: 1
