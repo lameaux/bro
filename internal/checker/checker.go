@@ -52,7 +52,12 @@ func checkHttpBody(check config.Check, response *http.Response) (actual string, 
 	}
 	bodyString := string(body)
 
-	actual = bodyString[0:100] + "..."
+	if len(bodyString) > 100 {
+		actual = bodyString[0:100] + "..."
+	} else {
+		actual = bodyString
+	}
+
 	ok = strings.Contains(bodyString, check.Contains)
 
 	return
