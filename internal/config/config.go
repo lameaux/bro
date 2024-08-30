@@ -56,21 +56,22 @@ func (s *Scenario) QueueSize() int {
 
 type HttpRequest struct {
 	Url       string  `yaml:"url"`
-	MethodRaw string  `yaml:"method"`
-	Body      *string `yaml:"body"`
+	MethodRaw *string `yaml:"method"`
+	BodyRaw   *string `yaml:"body"`
 }
 
 func (r *HttpRequest) Method() string {
-	if r.MethodRaw != "" {
-		return http.MethodGet
+	if r.MethodRaw != nil {
+		return *r.MethodRaw
+
 	}
 
-	return r.MethodRaw
+	return http.MethodGet
 }
 
 func (r *HttpRequest) BodyReader() io.Reader {
-	if r.Body != nil {
-		return strings.NewReader(*r.Body)
+	if r.BodyRaw != nil {
+		return strings.NewReader(*r.BodyRaw)
 	}
 
 	return nil
