@@ -39,12 +39,13 @@ func (r *Runner) Run(ctx context.Context) (*stats.RequestCounters, error) {
 		"scenario",
 		zerolog.Dict().
 			Str("name", r.scenario.Name).
-			Int("rps", r.scenario.RPS).
-			Int("vus", r.scenario.VUs).
-			Dur("duration", r.scenario.Duration),
+			Int("rps", r.scenario.Rps()).
+			Int("threads", r.scenario.Threads()).
+			Int("queueSize", r.scenario.QueueSize()).
+			Dur("duration", r.scenario.Duration()),
 	).Msg("running scenario")
 
-	queue := make(chan int, max(r.scenario.VUs, r.scenario.Buffer))
+	queue := make(chan int, r.scenario.QueueSize())
 	stop := make(chan struct{})
 
 	startTime := time.Now()
@@ -62,14 +63,14 @@ func (r *Runner) Run(ctx context.Context) (*stats.RequestCounters, error) {
 }
 
 func (r *Runner) startGenerator(ctx context.Context, queue chan<- int, stop chan struct{}) func() {
-	durationTicker := time.NewTicker(r.scenario.Duration)
+	durationTicker := time.NewTicker(r.scenario.Duration())
 	rateTicker := time.NewTicker(1 * time.Second)
 
 	go func() {
 		var num int
 
 		generate := func() {
-			for i := 0; i < r.scenario.RPS; i++ {
+			for i := 0; i < r.scenario.Rps(); i++ {
 				num++
 				r.requestCounters.Total.Add(1)
 				queue <- num
@@ -101,23 +102,23 @@ func (r *Runner) startGenerator(ctx context.Context, queue chan<- int, stop chan
 
 func (r *Runner) runSender(ctx context.Context, queue <-chan int, stop <-chan struct{}) error {
 	var g errgroup.Group
-	for vu := 0; vu < r.scenario.VUs; vu++ {
-		vuId := vu
+	for t := 0; t < r.scenario.Threads(); t++ {
+		threadId := t
 		g.Go(func() error {
 			for {
 				select {
 				case <-stop:
-					log.Debug().Int("vuId", vuId).Msg("shutting down")
+					log.Debug().Int("threadId", threadId).Msg("shutting down")
 					return nil
 				case <-ctx.Done():
 					return ctx.Err()
 				case msgId, ok := <-queue:
 					if !ok {
-						log.Debug().Int("vuId", vuId).Msg("shutting down")
+						log.Debug().Int("threadId", threadId).Msg("shutting down")
 						return nil
 					}
 
-					r.processMessage(ctx, vuId, msgId)
+					r.processMessage(ctx, threadId, msgId)
 				}
 			}
 		})
@@ -126,15 +127,15 @@ func (r *Runner) runSender(ctx context.Context, queue <-chan int, stop <-chan st
 	return g.Wait()
 }
 
-func (r *Runner) processMessage(ctx context.Context, vuId int, msgId int) {
-	ctxWithValues := context.WithValue(ctx, contextKey("vuId"), vuId)
+func (r *Runner) processMessage(ctx context.Context, threadId int, msgId int) {
+	ctxWithValues := context.WithValue(ctx, contextKey("threadId"), threadId)
 	ctxWithValues = context.WithValue(ctxWithValues, contextKey("msgId"), msgId)
 
 	startTime := time.Now()
 	resp, err := r.sendRequest(ctxWithValues)
 	if err != nil {
 		log.Debug().
-			Int("vuId", vuId).
+			Int("threadId", threadId).
 			Int("msgId", msgId).
 			Err(err).
 			Msg("failed to send http request")
@@ -146,7 +147,7 @@ func (r *Runner) processMessage(ctx context.Context, vuId int, msgId int) {
 
 	if err = r.runChecks(ctxWithValues, resp, latency); err != nil {
 		log.Debug().
-			Int("vuId", vuId).
+			Int("threadId", threadId).
 			Int("msgId", msgId).
 			Err(err).
 			Msg("failed to run checks")
@@ -258,9 +259,9 @@ func (r *Runner) makeLogEvent(
 	response *http.Response,
 	latency time.Duration,
 ) (*zerolog.Event, error) {
-	vuId, ok := ctx.Value(contextKey("vuId")).(int)
+	threadId, ok := ctx.Value(contextKey("threadId")).(int)
 	if !ok {
-		return nil, errors.New("missing vuId")
+		return nil, errors.New("missing threadId")
 	}
 
 	msgId, ok := ctx.Value(contextKey("msgId")).(int)
@@ -269,7 +270,7 @@ func (r *Runner) makeLogEvent(
 	}
 
 	logEvent := log.Debug().
-		Int("vuId", vuId).
+		Int("threadId", threadId).
 		Int("msgId", msgId).
 		Str("method", r.scenario.HttpRequest.Method()).
 		Str("url", r.scenario.HttpRequest.Url).

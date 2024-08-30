@@ -25,15 +25,33 @@ type HttpClient struct {
 }
 
 type Scenario struct {
-	Name        string        `yaml:"name"`
-	RPS         int           `yaml:"rps"`
-	Duration    time.Duration `yaml:"duration"`
-	VUs         int           `yaml:"vus"`
-	Buffer      int           `yaml:"buffer"`
-	PayloadType string        `yaml:"payloadType"`
-	HttpRequest HttpRequest   `yaml:"httpRequest"`
-	Checks      []Check       `yaml:"checks"`
-	Thresholds  []Threshold   `yaml:"thresholds"`
+	Name string `yaml:"name"`
+
+	RpsRaw       int           `yaml:"rps"`
+	DurationRaw  time.Duration `yaml:"duration"`
+	ThreadsRaw   int           `yaml:"threads"`
+	QueueSizeRaw int           `yaml:"queueSize"`
+
+	PayloadType string      `yaml:"payloadType"`
+	HttpRequest HttpRequest `yaml:"httpRequest"`
+	Checks      []Check     `yaml:"checks"`
+	Thresholds  []Threshold `yaml:"thresholds"`
+}
+
+func (s *Scenario) Rps() int {
+	return max(s.RpsRaw, 1)
+}
+
+func (s *Scenario) Duration() time.Duration {
+	return max(s.DurationRaw, 1*time.Second)
+}
+
+func (s *Scenario) Threads() int {
+	return max(s.ThreadsRaw, 1)
+}
+
+func (s *Scenario) QueueSize() int {
+	return max(s.QueueSizeRaw, s.Threads())
 }
 
 type HttpRequest struct {
@@ -42,15 +60,15 @@ type HttpRequest struct {
 	Body      *string `yaml:"body"`
 }
 
-func (r HttpRequest) Method() string {
-	if r.MethodRaw == "" {
+func (r *HttpRequest) Method() string {
+	if r.MethodRaw != "" {
 		return http.MethodGet
 	}
 
 	return r.MethodRaw
 }
 
-func (r HttpRequest) BodyReader() io.Reader {
+func (r *HttpRequest) BodyReader() io.Reader {
 	if r.Body != nil {
 		return strings.NewReader(*r.Body)
 	}

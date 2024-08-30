@@ -4,9 +4,6 @@ httpClient:
   disableFollowRedirects: true
 scenarios:
   - name: Check 301 Redirect
-    rps: 1
-    duration: 1s
-    vus: 1
     httpRequest:
       url: https://google.com
     checks:
@@ -19,11 +16,7 @@ scenarios:
       - type: check
         name: httpCode
         minCount: 1
-        maxCount: 1
   - name: Check 200 OK
-    rps: 2
-    duration: 1s
-    vus: 2
     httpRequest:
       url: https://www.google.com
     checks:
@@ -35,11 +28,7 @@ scenarios:
       - type: check
         name: httpCode
         minRate: 1.0
-        maxRate: 1.0
   - name: Check Error
-    rps: 1
-    duration: 1s
-    vus: 1
     httpRequest:
       url: https://www.google.com/unknown
     checks:
@@ -51,4 +40,3 @@ scenarios:
       - type: check
         name: httpCode
         minCount: 1
-        maxCount: 1

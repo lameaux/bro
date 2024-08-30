@@ -10,6 +10,8 @@ import (
 )
 
 const (
+	maxBodyLength = 100
+
 	typeHttpCode   = "httpCode"
 	typeHttpHeader = "httpHeader"
 	typeHttpBody   = "httpBody"
@@ -52,8 +54,8 @@ func checkHttpBody(check config.Check, response *http.Response) (actual string, 
 	}
 	bodyString := string(body)
 
-	if len(bodyString) > 100 {
-		actual = bodyString[0:100] + "..."
+	if len(bodyString) > maxBodyLength {
+		actual = bodyString[0:maxBodyLength] + "..."
 	} else {
 		actual = bodyString
 	}
