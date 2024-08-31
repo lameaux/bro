@@ -30,19 +30,32 @@ func Run(check config.Check, response *http.Response) (actual string, ok bool, e
 		return checkHttpBody(check, response)
 	}
 
-	return "", true, nil
+	return "", false, fmt.Errorf("unknown check type: %v", check.Type)
 }
 
 func checkHttpCode(check config.Check, response *http.Response) (actual string, ok bool, err error) {
 	actual = strconv.Itoa(response.StatusCode)
-	ok = actual == check.Equals
+
+	if check.Equals != "" {
+		ok = actual == check.Equals
+		return
+	}
 
 	return
 }
 
 func checkHttpHeader(check config.Check, response *http.Response) (actual string, ok bool, err error) {
 	actual = response.Header.Get(check.Name)
-	ok = actual == check.Equals
+
+	if check.Equals != "" {
+		ok = actual == check.Equals
+		return
+	}
+
+	if check.Contains != "" {
+		ok = strings.Contains(actual, check.Contains)
+		return
+	}
 
 	return
 }
@@ -60,7 +73,15 @@ func checkHttpBody(check config.Check, response *http.Response) (actual string, 
 		actual = bodyString
 	}
 
-	ok = strings.Contains(bodyString, check.Contains)
+	if check.Equals != "" {
+		ok = bodyString == check.Equals
+		return
+	}
+
+	if check.Contains != "" {
+		ok = strings.Contains(bodyString, check.Contains)
+		return
+	}
 
 	return
 }
