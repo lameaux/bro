@@ -8,6 +8,7 @@ import (
 	"github.com/lameaux/bro/internal/httpclient"
 	"github.com/lameaux/bro/internal/runner"
 	"github.com/lameaux/bro/internal/stats"
+	"github.com/lameaux/bro/internal/thresholds"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"math"
@@ -58,6 +59,7 @@ func processResults(results *stats.Stats) {
 
 func printStats(conf *config.Config, results *stats.Stats) {
 	totalDuration := results.EndTime.Sub(results.StartTime)
+	success := true
 
 	fmt.Println(conf.Name)
 
@@ -76,6 +78,21 @@ func printStats(conf *config.Config, results *stats.Stats) {
 
 		rps := math.Round(float64(counters.Total.Load()) / counters.Duration.Seconds())
 
+		passed, err := thresholds.ValidateScenario(scenario)
+		if err != nil {
+			log.Warn().
+				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
+				Msg("failed to validate thresholds")
+		}
+
+		if !passed {
+			success = false
+
+			log.Warn().
+				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
+				Msg("thresholds failed")
+		}
+
 		t.AppendRow(table.Row{
 			scenario.Name,
 			counters.Total.Load(),
@@ -87,7 +104,7 @@ func printStats(conf *config.Config, results *stats.Stats) {
 			fmt.Sprintf("%d ms", counters.GetLatencyAtPercentile(99)),
 			counters.Duration,
 			rps,
-			"OK",
+			passed,
 		})
 
 	}
@@ -96,5 +113,9 @@ func printStats(conf *config.Config, results *stats.Stats) {
 	t.Render()
 
 	fmt.Printf("Total duration: %v\n", totalDuration)
-	fmt.Println("OK")
+	if success {
+		fmt.Println("OK")
+	} else {
+		fmt.Println("Failed")
+	}
 }

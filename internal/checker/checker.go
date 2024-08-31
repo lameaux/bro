@@ -17,7 +17,30 @@ const (
 	typeHttpBody   = "httpBody"
 )
 
-func Run(check config.Check, response *http.Response) (actual string, ok bool, err error) {
+type CheckResult struct {
+	Actual string
+	Pass   bool
+	Error  error
+}
+
+func Run(checks []config.Check, response *http.Response) ([]CheckResult, bool) {
+	var results []CheckResult
+
+	success := true
+	for _, check := range checks {
+		result := runCheck(check, response)
+		results = append(results, result)
+
+		if !result.Pass {
+			success = false
+		}
+
+	}
+
+	return results, success
+}
+
+func runCheck(check config.Check, response *http.Response) CheckResult {
 	if check.Type == typeHttpCode {
 		return checkHttpCode(check, response)
 	}
@@ -30,58 +53,67 @@ func Run(check config.Check, response *http.Response) (actual string, ok bool, e
 		return checkHttpBody(check, response)
 	}
 
-	return "", false, fmt.Errorf("unknown check type: %v", check.Type)
+	return CheckResult{
+		Error: fmt.Errorf("unknown check type: %v", check.Type),
+	}
 }
 
-func checkHttpCode(check config.Check, response *http.Response) (actual string, ok bool, err error) {
-	actual = strconv.Itoa(response.StatusCode)
+func checkHttpCode(check config.Check, response *http.Response) CheckResult {
+	var result CheckResult
+
+	result.Actual = strconv.Itoa(response.StatusCode)
 
 	if check.Equals != "" {
-		ok = actual == check.Equals
-		return
+		result.Pass = result.Actual == check.Equals
+		return result
 	}
 
-	return
+	return result
 }
 
-func checkHttpHeader(check config.Check, response *http.Response) (actual string, ok bool, err error) {
-	actual = response.Header.Get(check.Name)
+func checkHttpHeader(check config.Check, response *http.Response) CheckResult {
+	var result CheckResult
+
+	result.Actual = response.Header.Get(check.Name)
 
 	if check.Equals != "" {
-		ok = actual == check.Equals
-		return
+		result.Pass = result.Actual == check.Equals
+		return result
 	}
 
 	if check.Contains != "" {
-		ok = strings.Contains(actual, check.Contains)
-		return
+		result.Pass = strings.Contains(result.Actual, check.Contains)
+		return result
 	}
 
-	return
+	return result
 }
 
-func checkHttpBody(check config.Check, response *http.Response) (actual string, ok bool, err error) {
+func checkHttpBody(check config.Check, response *http.Response) CheckResult {
+	var result CheckResult
+
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		return "", false, fmt.Errorf("failed to read response body: %w", err)
+		result.Error = fmt.Errorf("failed to read response body: %w", err)
+		return result
 	}
 	bodyString := string(body)
 
 	if len(bodyString) > maxBodyLength {
-		actual = bodyString[0:maxBodyLength] + "..."
+		result.Actual = bodyString[0:maxBodyLength] + "..."
 	} else {
-		actual = bodyString
+		result.Actual = bodyString
 	}
 
 	if check.Equals != "" {
-		ok = bodyString == check.Equals
-		return
+		result.Pass = bodyString == check.Equals
+		return result
 	}
 
 	if check.Contains != "" {
-		ok = strings.Contains(bodyString, check.Contains)
-		return
+		result.Pass = strings.Contains(bodyString, check.Contains)
+		return result
 	}
 
-	return
+	return result
 }

@@ -12,9 +12,9 @@ scenarios:
       - type: httpCode
         equals: 200
     thresholds:
-      - type: check
-        name: httpCode
+      - metric: checks
+        type: httpCode
         minRate: 0.99
-      - type: latency
-        name: p99
+      - metric: latency
+        type: p99
         maxValue: 100ms

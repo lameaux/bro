@@ -8,6 +8,7 @@ import (
 	"github.com/lameaux/bro/internal/config"
 	"github.com/lameaux/bro/internal/metrics"
 	"github.com/lameaux/bro/internal/stats"
+	"github.com/lameaux/bro/internal/thresholds"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -22,11 +23,11 @@ type contextKey string
 
 type Runner struct {
 	httpClient      *http.Client
-	scenario        config.Scenario
+	scenario        *config.Scenario
 	requestCounters *stats.RequestCounters
 }
 
-func New(httpClient *http.Client, scenario config.Scenario) *Runner {
+func New(httpClient *http.Client, scenario *config.Scenario) *Runner {
 	return &Runner{
 		httpClient:      httpClient,
 		scenario:        scenario,
@@ -44,6 +45,8 @@ func (r *Runner) Run(ctx context.Context) (*stats.RequestCounters, error) {
 			Int("queueSize", r.scenario.QueueSize()).
 			Dur("duration", r.scenario.Duration()),
 	).Msg("running scenario")
+
+	thresholds.AddScenario(r.scenario)
 
 	queue := make(chan int, r.scenario.QueueSize())
 	stop := make(chan struct{})
@@ -145,16 +148,36 @@ func (r *Runner) processMessage(ctx context.Context, threadId int, msgId int) {
 
 	latency := time.Since(startTime)
 
-	if err = r.runChecks(ctxWithValues, resp, latency); err != nil {
+	checkResults, success := checker.Run(r.scenario.Checks, resp)
+
+	err = r.logCheckResults(
+		ctxWithValues,
+		resp,
+		latency,
+		r.scenario.Checks,
+		checkResults,
+		success,
+	)
+	if err != nil {
 		log.Debug().
 			Int("threadId", threadId).
 			Int("msgId", msgId).
 			Err(err).
-			Msg("failed to run checks")
+			Msg("failed to log check results")
+		return
 	}
 
-	// validate threshold
-	// TODO
+	err = r.updateMetrics(resp, success, latency)
+	if err != nil {
+		log.Debug().
+			Int("threadId", threadId).
+			Int("msgId", msgId).
+			Err(err).
+			Msg("failed to update metrics")
+		return
+	}
+
+	thresholds.UpdateCountersForScenario(r.scenario, checkResults)
 }
 
 func (r *Runner) sendRequest(ctx context.Context) (*http.Response, error) {
@@ -189,51 +212,60 @@ func (r *Runner) sendRequest(ctx context.Context) (*http.Response, error) {
 	return res, nil
 }
 
-func (r *Runner) runChecks(ctx context.Context, response *http.Response, latency time.Duration) error {
+func (r *Runner) logCheckResults(
+	ctx context.Context,
+	response *http.Response,
+	latency time.Duration,
+	checks []config.Check,
+	results []checker.CheckResult,
+	success bool,
+) error {
 	logEvent, err := r.makeLogEvent(ctx, response, latency)
 	if err != nil {
 		return fmt.Errorf("failed to make LogEvent: %w", err)
 	}
 
-	success := true
 	checkResults := zerolog.Arr()
-	for _, check := range r.scenario.Checks {
-		value, ok, err := checker.Run(check, response)
+	for i, check := range checks {
+		result := results[i]
+
 		checkResults = checkResults.Dict(
 			zerolog.Dict().
 				Str("type", check.Type).
 				Str("name", check.Name).
-				Str("value", value).
-				Bool("ok", ok).
-				Err(err),
+				Str("value", result.Actual).
+				Bool("pass", result.Pass).
+				Err(result.Error),
 		)
-		if !ok {
-			success = false
-		}
 	}
 
-	logEvent.Array("checks", checkResults)
+	logEvent.
+		Array("checks", checkResults).
+		Bool("success", success).
+		Msg("response")
 
+	return nil
+}
+
+func (r *Runner) updateMetrics(response *http.Response, success bool, latency time.Duration) error {
 	if success {
 		r.requestCounters.Success.Add(1)
 	} else {
 		r.requestCounters.Invalid.Add(1)
 		r.requestCounters.Failed.Add(1)
 
-		r.countFailedRequest("code")
+		r.countFailedRequest("check")
 	}
 
 	labels := r.responseLabels(response, success)
 	metrics.HttpResponsesTotal.With(labels).Inc()
 
-	if err = r.requestCounters.RecordLatency(latency); err != nil {
+	if err := r.requestCounters.RecordLatency(latency); err != nil {
 		return fmt.Errorf("failed to record latency: %w", err)
 	}
 
 	labels = r.responseLabels(response, success)
 	metrics.HttpRequestDurationSec.With(labels).Observe(latency.Seconds())
-
-	logEvent.Bool("success", success).Msg("response")
 
 	return nil
 }

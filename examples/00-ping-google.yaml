@@ -13,10 +13,14 @@ scenarios:
         name: Location
         equals: https://www.google.com/
     thresholds:
-      - type: check
-        name: httpCode
-        minCount: 1
+      - metric: checks
+        type: httpCode
+        minRate: 0.99
+      - metric: checks
+        type: httpHeader
+        minRate: 0.99
   - name: Check 200 OK
+    rps: 2
     httpRequest:
       url: https://www.google.com
     checks:
@@ -25,9 +29,9 @@ scenarios:
       - type: httpBody
         contains: <title>Google</title>
     thresholds:
-      - type: check
-        name: httpCode
-        minRate: 1.0
+      - metric: checks
+        type: httpCode
+        minRate: 0.99
   - name: Check Error
     httpRequest:
       url: https://www.google.com/unknown
@@ -37,6 +41,6 @@ scenarios:
       - type: httpBody
         contains: <title>Error 404 (Not Found)!!1</title>
     thresholds:
-      - type: check
-        name: httpCode
-        minCount: 1
+      - metric: checks
+        type: httpCode
+        minRate: 0.99

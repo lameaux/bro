@@ -11,10 +11,10 @@ import (
 )
 
 type Config struct {
-	Name       string     `yaml:"name"`
-	Execution  string     `yaml:"execution"`
-	HttpClient HttpClient `yaml:"httpClient"`
-	Scenarios  []Scenario `yaml:"scenarios"`
+	Name       string      `yaml:"name"`
+	Execution  string      `yaml:"execution"`
+	HttpClient HttpClient  `yaml:"httpClient"`
+	Scenarios  []*Scenario `yaml:"scenarios"`
 }
 
 type HttpClient struct {
@@ -86,17 +86,17 @@ type Check struct {
 }
 
 type Threshold struct {
-	Type string `yaml:"type"`
-	Name string `yaml:"name"`
+	Metric string `yaml:"metric"`
+	Type   string `yaml:"type"`
 
-	MinCount int `yaml:"minCount"`
-	MaxCount int `yaml:"maxCount"`
+	MinCount *int `yaml:"minCount"`
+	MaxCount *int `yaml:"maxCount"`
 
-	MinValue string `yaml:"minValue"`
-	MaxValue string `yaml:"maxValue"`
+	MinValue *int `yaml:"minValue"`
+	MaxValue *int `yaml:"maxValue"`
 
-	MinRate string `yaml:"minRate"`
-	MaxRate string `yaml:"maxRate"`
+	MinRate *float64 `yaml:"minRate"`
+	MaxRate *float64 `yaml:"maxRate"`
 }
 
 func LoadFromFile(fileName string) (*Config, error) {
