@@ -11,7 +11,7 @@ all: clean build
 
 .PHONY: build
 build:
-	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_FILE) $(SRC_DIR)/**/*.go
+	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_FILE) $(SRC_DIR)/cmd/bro/bro.go
 
 .PHONY: install
 install: build
