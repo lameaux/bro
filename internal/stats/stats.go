@@ -9,15 +9,20 @@ import (
 
 func New() *Stats {
 	return &Stats{
-		StartTime:       time.Now(),
-		RequestCounters: make(map[string]*RequestCounters),
+		StartTime:        time.Now(),
+		RequestCounters:  make(map[string]*RequestCounters),
+		ThresholdsPassed: make(map[string]bool),
 	}
 }
 
 type Stats struct {
-	StartTime       time.Time
-	EndTime         time.Time
-	RequestCounters map[string]*RequestCounters
+	StartTime     time.Time
+	EndTime       time.Time
+	TotalDuration time.Duration
+
+	RequestCounters  map[string]*RequestCounters
+	ThresholdsPassed map[string]bool
+	Rps              float64
 }
 
 func NewRequestCounters() *RequestCounters {
@@ -28,6 +33,7 @@ func NewRequestCounters() *RequestCounters {
 
 type RequestCounters struct {
 	Duration time.Duration
+	Rps      float64
 
 	Total   atomic.Int64
 	Sent    atomic.Int64

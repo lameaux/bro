@@ -13,6 +13,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -61,6 +62,7 @@ func (r *Runner) Run(ctx context.Context) (*stats.RequestCounters, error) {
 	}
 
 	r.requestCounters.Duration = time.Since(startTime)
+	r.requestCounters.Rps = math.Round(float64(r.requestCounters.Total.Load()) / r.requestCounters.Duration.Seconds())
 
 	return r.requestCounters, nil
 }

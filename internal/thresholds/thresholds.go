@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/lameaux/bro/internal/checker"
 	"github.com/lameaux/bro/internal/config"
+	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"sync"
 )
@@ -99,12 +100,20 @@ func ValidateScenario(scenario *config.Scenario) (success bool, err error) {
 				passed = false
 			}
 
-			log.Debug().
+			var logEvent *zerolog.Event
+			if passed {
+				logEvent = log.Debug()
+			} else {
+				logEvent = log.Error()
+			}
+
+			logEvent.
+				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
 				Str("metric", threshold.Metric).
 				Str("type", threshold.Type).
 				Float64("rate", rate).
 				Bool("passed", passed).
-				Msg("threshold")
+				Msg("threshold validation")
 
 			if !passed {
 				success = false

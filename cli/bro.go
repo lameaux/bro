@@ -38,6 +38,7 @@ func main() {
 	var silent = flag.Bool("silent", false, "enable silent mode")
 	var skipBanner = flag.Bool("skipBanner", false, "skip banner")
 	var skipResults = flag.Bool("skipResults", false, "skip results")
+	var skipExitCode = flag.Bool("skipExitCode", false, "skip exit code")
 	var metricsPort = flag.String("metricsPort", "", "port for metrics server")
 
 	flag.Parse()
@@ -61,7 +62,7 @@ func main() {
 
 	var metricsServer *http.Server
 	if *metricsPort != "" {
-		metricsServer := metrics.StartServer(*metricsPort)
+		metricsServer = metrics.StartServer(*metricsPort)
 		defer metrics.StopServer(ctx, metricsServer)
 	}
 
@@ -75,7 +76,11 @@ func main() {
 
 	conf := loadConfig(flag.Args())
 
-	app.Run(ctx, conf, !*skipResults)
+	success := app.Run(ctx, conf, !*skipResults)
+
+	if !success && !*skipExitCode {
+		os.Exit(1)
+	}
 }
 
 func loadConfig(args []string) *config.Config {
@@ -90,7 +95,9 @@ func loadConfig(args []string) *config.Config {
 		log.Fatal().Err(err).Msg("error loading config from file")
 	}
 
-	log.Info().Str("configName", c.Name).Str("configFile", configFile).Msgf("config loaded")
+	log.Info().
+		Dict("config", zerolog.Dict().Str("name", c.Name).Str("path", c.FileName)).
+		Msg("config loaded")
 
 	return c
 }
@@ -101,7 +108,7 @@ func handleSignals(shutdownFn func()) {
 
 	go func() {
 		sig := <-sigCh
-		log.Info().Str("signal", sig.String()).Msgf("received signal")
+		log.Info().Str("signal", sig.String()).Msg("received signal")
 		shutdownFn()
 	}()
 }

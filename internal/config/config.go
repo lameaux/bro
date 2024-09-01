@@ -15,6 +15,8 @@ type Config struct {
 	Execution  string      `yaml:"execution"`
 	HttpClient HttpClient  `yaml:"httpClient"`
 	Scenarios  []*Scenario `yaml:"scenarios"`
+
+	FileName string
 }
 
 type HttpClient struct {
@@ -111,6 +113,7 @@ func LoadFromFile(fileName string) (*Config, error) {
 	if err = d.Decode(&c); err != nil {
 		return nil, fmt.Errorf("failed to parse file: %w", err)
 	}
+	c.FileName = fileName
 
 	return &c, nil
 }

@@ -11,19 +11,20 @@ import (
 	"github.com/lameaux/bro/internal/thresholds"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"math"
 	"os"
 	"time"
 )
 
-func Run(ctx context.Context, conf *config.Config, showStats bool) {
+func Run(ctx context.Context, conf *config.Config, printResults bool) bool {
 	results := runScenarios(ctx, conf)
 
-	processResults(results)
+	success := processResults(results)
 
-	if showStats {
-		printStats(conf, results)
+	if printResults {
+		printResultsTable(conf, results, success)
 	}
+
+	return success
 }
 
 func runScenarios(ctx context.Context, conf *config.Config) *stats.Stats {
@@ -41,27 +42,49 @@ func runScenarios(ctx context.Context, conf *config.Config) *stats.Stats {
 		if err != nil {
 			log.Error().Err(err).
 				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
-				Msgf("failed to run scenario")
+				Msg("failed to run scenario")
+			continue
 		}
 
 		results.RequestCounters[scenario.Name] = counters
+
+		passed, err := thresholds.ValidateScenario(scenario)
+		if err != nil {
+			log.Warn().
+				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
+				Msg("failed to validate thresholds")
+			continue
+		}
+
+		results.ThresholdsPassed[scenario.Name] = passed
 	}
 
 	results.EndTime = time.Now()
+	results.TotalDuration = results.EndTime.Sub(results.StartTime)
 
 	return results
 }
 
-func processResults(results *stats.Stats) {
-	totalDuration := results.EndTime.Sub(results.StartTime)
-	log.Info().Dur("totalDuration", totalDuration).Bool("ok", true).Msg("results")
-}
-
-func printStats(conf *config.Config, results *stats.Stats) {
-	totalDuration := results.EndTime.Sub(results.StartTime)
+func processResults(results *stats.Stats) bool {
 	success := true
 
-	fmt.Println(conf.Name)
+	for _, passed := range results.ThresholdsPassed {
+		if !passed {
+			success = false
+			break
+		}
+	}
+
+	log.Info().
+		Dur("totalDuration", results.TotalDuration).
+		Bool("success", success).
+		Msg("result")
+
+	return success
+}
+
+func printResultsTable(conf *config.Config, results *stats.Stats, success bool) {
+	fmt.Printf("Name: %s\nPath: %s\n", conf.Name, conf.FileName)
 
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
@@ -76,23 +99,6 @@ func printStats(conf *config.Config, results *stats.Stats) {
 			continue
 		}
 
-		rps := math.Round(float64(counters.Total.Load()) / counters.Duration.Seconds())
-
-		passed, err := thresholds.ValidateScenario(scenario)
-		if err != nil {
-			log.Warn().
-				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
-				Msg("failed to validate thresholds")
-		}
-
-		if !passed {
-			success = false
-
-			log.Warn().
-				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
-				Msg("thresholds failed")
-		}
-
 		t.AppendRow(table.Row{
 			scenario.Name,
 			counters.Total.Load(),
@@ -103,8 +109,8 @@ func printStats(conf *config.Config, results *stats.Stats) {
 			counters.Invalid.Load(),
 			fmt.Sprintf("%d ms", counters.GetLatencyAtPercentile(99)),
 			counters.Duration,
-			rps,
-			passed,
+			counters.Rps,
+			results.ThresholdsPassed[scenario.Name],
 		})
 
 	}
@@ -112,7 +118,8 @@ func printStats(conf *config.Config, results *stats.Stats) {
 	t.SetStyle(table.StyleLight)
 	t.Render()
 
-	fmt.Printf("Total duration: %v\n", totalDuration)
+	fmt.Printf("Total duration: %v\n", results.TotalDuration)
+
 	if success {
 		fmt.Println("OK")
 	} else {
