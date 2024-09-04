@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"context"
+	"fmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
@@ -48,22 +49,22 @@ func init() {
 	prometheus.MustRegister(HttpRequestDurationSec)
 }
 
-func StartServer(port string) *http.Server {
+func StartServer(port int) *http.Server {
 	http.Handle("/metrics", promhttp.Handler())
 
 	server := &http.Server{
-		Addr: ":" + port,
+		Addr: fmt.Sprintf(":%d", port),
 	}
 
 	go func() {
 		if err := server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal().Err(err).
-				Str("port", port).
+				Int("port", port).
 				Msg("failed to start metrics server")
 		}
 	}()
 
-	log.Debug().Str("port", port).Msg("metrics server started")
+	log.Debug().Int("port", port).Msg("metrics server started")
 
 	return server
 }

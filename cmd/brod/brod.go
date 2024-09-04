@@ -24,7 +24,8 @@ func main() {
 	var debug = flag.Bool("debug", false, "enable debug mode")
 	var logJson = flag.Bool("logJson", false, "log as json")
 	var skipBanner = flag.Bool("skipBanner", false, "skip banner")
-	var metricsPort = flag.String("metricsPort", "9090", "port for metrics server")
+	var grpcPort = flag.Int("grpcPort", 8080, "port for grpc server")
+	var metricsPort = flag.Int("metricsPort", 9090, "port for metrics server")
 
 	flag.Parse()
 
@@ -47,10 +48,17 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
+	grpcServer, err := startGrpcServer(*grpcPort)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to start grpc server")
+		return
+	}
+
 	var metricsServer = metrics.StartServer(*metricsPort)
 
 	handleSignals(func() {
 		metrics.StopServer(ctx, metricsServer)
+		stopGrpcServer(grpcServer)
 
 		cancel()
 	})

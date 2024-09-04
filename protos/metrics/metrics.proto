@@ -1,0 +1,16 @@
+syntax = "proto3";
+package metrics;
+option go_package = "github.com/lameaux/bro/protos/metrics";
+
+service Metrics {
+  rpc sendCounters(Counters) returns (Result) {}
+}
+
+message Counters {
+  string name = 1;
+  string value = 2;
+}
+
+message Result {
+
+}

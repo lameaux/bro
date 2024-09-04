@@ -7,10 +7,14 @@ DOCKER_IMAGE := lameaux/bro
 .PHONY: all
 all: clean build
 
+.PHONY: generate
+generate:
+	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative protos/metrics/metrics.proto
+
 .PHONY: build
 build:
-	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_DIR)/bro $(SRC_DIR)/cmd/bro/bro.go
-	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_DIR)/brod $(SRC_DIR)/cmd/brod/brod.go
+	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_DIR)/bro $(SRC_DIR)/cmd/bro/*.go
+	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_DIR)/brod $(SRC_DIR)/cmd/brod/*.go
 
 .PHONY: install
 install: build
