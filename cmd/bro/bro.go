@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 const (
@@ -60,7 +61,7 @@ func main() {
 	conf := loadConfig(flag.Args())
 
 	if *brodAddr != "" {
-		log.Debug().Str("addr", *brodAddr).Msg("brod")
+		go startBrodWorker(ctx, *brodAddr)
 	}
 
 	success := app.Run(ctx, conf, !*skipResults)
@@ -98,4 +99,21 @@ func handleSignals(shutdownFn func()) {
 		log.Info().Str("signal", sig.String()).Msg("received signal")
 		shutdownFn()
 	}()
+}
+
+func startBrodWorker(ctx context.Context, addr string) {
+	log.Debug().Str("brod", addr).Msg("started brod worker")
+
+	rateTicker := time.NewTicker(1 * time.Second)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-rateTicker.C:
+			if err := sendCounters(ctx, addr); err != nil {
+				log.Warn().Err(err).Msg("failed to send counters")
+			}
+		}
+	}
 }

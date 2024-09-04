@@ -12,5 +12,5 @@ message Counters {
 }
 
 message Result {
-
+  string msg = 1;
 }

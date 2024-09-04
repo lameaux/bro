@@ -19,7 +19,7 @@ func (s *server) SendCounters(_ context.Context, counters *pb.Counters) (*pb.Res
 		Str("value", counters.Value).
 		Msg("counter received")
 
-	return &pb.Result{}, nil
+	return &pb.Result{Msg: fmt.Sprintf("received %s=%s", counters.Name, counters.Value)}, nil
 }
 
 func startGrpcServer(port int) (*grpc.Server, error) {
