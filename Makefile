@@ -1,7 +1,5 @@
-APP_NAME := bro
 SRC_DIR := .
 BUILD_DIR := ./bin
-BUILD_FILE := $(BUILD_DIR)/$(APP_NAME)
 GIT_HASH := $(shell git rev-parse --short HEAD)
 DOCKER_REPO := ghcr.io
 DOCKER_IMAGE := lameaux/bro
@@ -11,15 +9,21 @@ all: clean build
 
 .PHONY: build
 build:
-	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_FILE) $(SRC_DIR)/cmd/bro/bro.go
+	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_DIR)/bro $(SRC_DIR)/cmd/bro/bro.go
+	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_DIR)/brod $(SRC_DIR)/cmd/brod/brod.go
 
 .PHONY: install
 install: build
-	mv $(BUILD_FILE) $(GOPATH)/bin
+	mv $(BUILD_DIR)/bro $(GOPATH)/bin
+	mv $(BUILD_DIR)/brod $(GOPATH)/bin
 
 .PHONY: run
 run: build
-	$(BUILD_FILE) $(ARGS)
+	$(BUILD_DIR)/bro $(ARGS)
+
+.PHONY: serve
+serve: build
+	$(BUILD_DIR)/brod $(ARGS)
 
 .PHONY: clean
 clean:

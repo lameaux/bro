@@ -5,28 +5,16 @@ import (
 	"flag"
 	"fmt"
 	"github.com/lameaux/bro/internal/app"
+	"github.com/lameaux/bro/internal/banner"
 	"github.com/lameaux/bro/internal/config"
-	"github.com/lameaux/bro/internal/metrics"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 )
 
 const (
-	logo = `
- █████                       
-░░███                        
- ░███████  ████████   ██████ 
- ░███░░███░░███░░███ ███░░███
- ░███ ░███ ░███ ░░░ ░███ ░███
- ░███ ░███ ░███     ░███ ░███
- ████████  █████    ░░██████ 
-░░░░░░░░  ░░░░░      ░░░░░░  
-
-`
 	appName    = "bro"
 	appVersion = "v0.0.1"
 )
@@ -36,10 +24,11 @@ var GitHash string
 func main() {
 	var debug = flag.Bool("debug", false, "enable debug mode")
 	var silent = flag.Bool("silent", false, "enable silent mode")
+	var logJson = flag.Bool("logJson", false, "log as json")
 	var skipBanner = flag.Bool("skipBanner", false, "skip banner")
 	var skipResults = flag.Bool("skipResults", false, "skip results")
 	var skipExitCode = flag.Bool("skipExitCode", false, "skip exit code")
-	var metricsPort = flag.String("metricsPort", "", "port for metrics server")
+	var brodAddr = flag.String("brodAddr", "", "brod address")
 
 	flag.Parse()
 
@@ -51,8 +40,12 @@ func main() {
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
+	if !*logJson {
+		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	}
+
 	if !*silent && !*skipBanner {
-		fmt.Print(logo)
+		fmt.Print(banner.Banner)
 	}
 
 	log.Info().Str("version", appVersion).Str("build", GitHash).Msg(appName)
@@ -60,21 +53,15 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	var metricsServer *http.Server
-	if *metricsPort != "" {
-		metricsServer = metrics.StartServer(*metricsPort)
-		defer metrics.StopServer(ctx, metricsServer)
-	}
-
 	handleSignals(func() {
-		if *metricsPort != "" {
-			metrics.StopServer(ctx, metricsServer)
-		}
-
 		cancel()
 	})
 
 	conf := loadConfig(flag.Args())
+
+	if *brodAddr != "" {
+		log.Debug().Str("addr", *brodAddr).Msg("brod")
+	}
 
 	success := app.Run(ctx, conf, !*skipResults)
 
