@@ -22,7 +22,7 @@ It is written in [Go](https://github.com/golang/go), test scenarios are defined 
 Try it together with [mox](https://github.com/lameaux/mox) - a tool to stub external dependencies, so that your
 application can be tested in isolation.
 
-Check out [nft](https://github.com/lameaux/nft) repo to learn more about **bro** & **mox** for non-functional testing.
+Check out [nft repo](https://github.com/lameaux/nft) to learn more about **bro** & **mox** for non-functional testing.
 
 # Installation
 
