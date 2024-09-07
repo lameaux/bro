@@ -13,40 +13,80 @@
 
 # About
 
-This tool allows you to execute load testing scenarios with both constant and variable rate traffic patterns.
+`bro` allows you to execute load testing scenarios with both constant and variable rate traffic patterns.
 
 During the execution it collects metrics (e.g. RPS, latency, errors) and validates them against defined thresholds. 
 
-It is written in Go, test scenarios are defined in YAML.
+It is written in [Go](https://github.com/golang/go), test scenarios are defined in YAML.
 
 Try it together with [mox](https://github.com/lameaux/mox) - a tool to stub external dependencies, so that your
 application can be tested in isolation.
 
-Check out [nft](https://github.com/lameaux/nft) repo to learn more about bro & mox for non-functional testing.
+Check out [nft](https://github.com/lameaux/nft) repo to learn more about **bro** & **mox** for non-functional testing.
 
 # Installation
 
-Make sure you have `GOPATH` set up correctly.
+Make sure you have [Go](https://go.dev/doc/install) installed and `GOPATH` is set up correctly.
+
+Clone this repository and run:
 
 ```shell
 make install
 ```
 
+You will have `bro`, `brod` and `broctl` installed.
+
 # Usage
+
+## bro
+
+`bro` is the main binary that runs load testing scenarios. 
+
+Optionally, it can be integrated with `brod` to aggregate statistics and run distributed tests with `broctl`. 
 
 ```shell
 bro [flags] <config.yaml>
 
 --debug
 --silent
+--logJson
 --skipBanner
 --skipResults
---metricsPort=9090
-
-Examples:
-- bro --silent example/02-ping-google-com.yaml 
-- bro --debug examples/01-simple-constant-rate.yaml
+--skipExitCode
+--brodAddr=brod:8080
 ```
+
+### Flags
+
+#### --debug
+
+Enables debug mode. Results in a more detailed logging.
+
+#### --silent
+
+Changes log level from INFO to ERROR.
+
+#### --logJson
+
+Changes log format to JSON.
+
+#### --skipBanner
+
+Skips printing banner to stdout.
+
+#### --skipResults
+
+Skips printing results table to stdout.
+
+#### --skipExitCode
+
+Do not return exit code 1 when tests fail.
+
+#### --brodAddr=brod:8080
+
+Connects `bro` (client) with `brod` (server).
+
+### Example
 
 ```shell
 bro --skipBanner --debug examples/00-ping-google.yaml
@@ -77,6 +117,82 @@ Total duration: 3.00286425s
 OK
 ```
 
+## brod
+
+`brod` is a server that collects statistics from `bro` client instances and exposes Prometheus metrics. 
+
+It is also used by `broctl` to synchronize `bro` instances when running distributed tests.
+
+```shell
+brod [flags]
+
+--debug
+--logJson
+--skipBanner
+--port=8080
+--metricsPort=9090
+```
+
+### Flags
+
+#### --debug
+
+Enables debug mode. Results in more detailed logging.
+
+#### --logJson
+
+Changes log format to JSON.
+
+#### --skipBanner
+
+Skips printing banner to stdout.
+
+#### --port=8080
+
+Defines a port for grpc server.
+
+#### --metricsPort=9090
+
+Defines a port for metrics endpoint.
+
+### Example
+
+```shell
+brod --logJson
+```
+
+## broctl
+
+`broctl` is used to run distributed tests using several instances of `bro`. 
+
+```shell
+broctl [flags] <command>
+
+--debug
+--logJson
+--skipBanner
+```
+
+### Flags
+
+#### --debug
+
+Enables debug mode. Results in more detailed logging.
+
+#### --logJson
+
+Changes log format to JSON.
+
+#### --skipBanner
+
+Skips printing banner to stdout.
+
+### Example
+
+```shell
+broctl --debug
+```
+
 # Examples
 
 See [examples](./examples) dir for testing examples:
@@ -84,7 +200,7 @@ See [examples](./examples) dir for testing examples:
 - [Ping Google](./examples/00-ping-google.yaml)
 - [Simple Constant Rate Example](./examples/01-simple-constant-rate.yaml)
 
-Check out [nft](https://github.com/lameaux/nft) repo for more examples.
+Check out [nft repo](https://github.com/lameaux/nft) for more examples.
 
 # Test Configuration
 
