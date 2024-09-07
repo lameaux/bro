@@ -91,29 +91,35 @@ Connects `bro` (client) with `brod` (server).
 ```shell
 bro --skipBanner --debug examples/00-ping-google.yaml
 
-{"level":"info","version":"v0.0.1","build":"76d613c","time":"2024-08-30T19:58:05+03:00","message":"bro"}
-{"level":"info","configName":"Ping Google","configFile":"examples/00-ping-google.yaml","time":"2024-08-30T19:58:05+03:00","message":"config loaded"}
-{"level":"debug","disableKeepAlive":false,"timeout":5000,"maxIdleConnsPerHost":100,"time":"2024-08-30T19:58:05+03:00","message":"creating http client"}
-{"level":"info","execution":"","time":"2024-08-30T19:58:05+03:00","message":"executing scenarios... press Ctrl+C (SIGINT) or send SIGTERM to terminate."}
-{"level":"info","scenario":{"name":"Check 301 Redirect","rps":1,"threads":1,"queueSize":1,"duration":1000},"time":"2024-08-30T19:58:05+03:00","message":"running scenario"}
-{"level":"debug","threadId":0,"msgId":1,"method":"","url":"https://google.com","code":301,"latency":867,"checks":[{"type":"httpCode","name":"","value":"301","ok":true},{"type":"httpHeader","name":"Location","value":"https://www.google.com/","ok":true}],"success":true,"time":"2024-08-30T19:58:06+03:00","message":"response"}
-{"level":"debug","threadId":0,"time":"2024-08-30T19:58:06+03:00","message":"shutting down"}
-{"level":"info","scenario":{"name":"Check 200 OK","rps":1,"threads":1,"queueSize":1,"duration":1000},"time":"2024-08-30T19:58:06+03:00","message":"running scenario"}
-{"level":"debug","threadId":0,"msgId":1,"method":"","url":"https://www.google.com","code":200,"latency":800,"checks":[{"type":"httpCode","name":"","value":"200","ok":true},{"type":"httpBody","name":"","value":"<!doctype html><html itemscope=\"\" itemtype=\"http://schema.org/WebPage\" lang=\"en-CY\"><head><meta cont...","ok":true}],"success":true,"time":"2024-08-30T19:58:07+03:00","message":"response"}
-{"level":"debug","threadId":0,"time":"2024-08-30T19:58:07+03:00","message":"shutting down"}
-{"level":"info","scenario":{"name":"Check Error","rps":1,"threads":1,"queueSize":1,"duration":1000},"time":"2024-08-30T19:58:07+03:00","message":"running scenario"}
-{"level":"debug","threadId":0,"msgId":1,"method":"","url":"https://www.google.com/unknown","code":404,"latency":150,"checks":[{"type":"httpCode","name":"","value":"404","ok":true},{"type":"httpBody","name":"","value":"<!DOCTYPE html>\n<html lang=en>\n  <meta charset=utf-8>\n  <meta name=viewport content=\"initial-scale=1...","ok":true}],"success":true,"time":"2024-08-30T19:58:07+03:00","message":"response"}
-{"level":"debug","threadId":0,"time":"2024-08-30T19:58:08+03:00","message":"shutting down"}
-{"level":"info","totalDuration":3002.86425,"ok":true,"time":"2024-08-30T19:58:08+03:00","message":"results"}
-Ping Google
+4:50PM INF bro build=91fef7e version=v0.0.1
+4:50PM INF config loaded config={"name":"Ping Google","path":"examples/00-ping-google.yaml"}
+4:50PM DBG creating http client disableKeepAlive=false maxIdleConnsPerHost=100 timeout=5000
+4:50PM INF executing scenarios... press Ctrl+C (SIGINT) or send SIGTERM to terminate. execution=
+4:50PM INF running scenario scenario={"duration":1000,"name":"Check 301 Redirect","queueSize":1,"rps":1,"threads":1}
+4:50PM DBG response checks=[{"name":"","pass":true,"type":"httpCode","value":"301"},{"name":"Location","pass":true,"type":"httpHeader","value":"https://www.google.com/"}] code=301 latency=371 method=GET msgId=1 success=true threadId=0 url=https://google.com
+4:50PM DBG shutting down threadId=0
+4:50PM DBG threshold validation metric=checks passed=true rate=1 scenario={"name":"Check 301 Redirect"} type=httpCode
+4:50PM DBG threshold validation metric=checks passed=true rate=1 scenario={"name":"Check 301 Redirect"} type=httpHeader
+4:50PM INF running scenario scenario={"duration":1000,"name":"Check 200 OK","queueSize":1,"rps":2,"threads":1}
+4:50PM DBG response checks=[{"name":"","pass":true,"type":"httpCode","value":"200"},{"name":"","pass":true,"type":"httpBody","value":"<!doctype html><html itemscope=\"\" itemtype=\"http://schema.org/WebPage\" lang=\"en-CY\"><head><meta cont..."}] code=200 latency=319 method=GET msgId=1 success=true threadId=0 url=https://www.google.com
+4:50PM DBG response checks=[{"name":"","pass":true,"type":"httpCode","value":"200"},{"name":"","pass":true,"type":"httpBody","value":"<!doctype html><html itemscope=\"\" itemtype=\"http://schema.org/WebPage\" lang=\"en-CY\"><head><meta cont..."}] code=200 latency=118 method=GET msgId=2 success=true threadId=0 url=https://www.google.com
+4:50PM DBG shutting down threadId=0
+4:50PM DBG threshold validation metric=checks passed=true rate=1 scenario={"name":"Check 200 OK"} type=httpCode
+4:50PM INF running scenario scenario={"duration":1000,"name":"Check Error","queueSize":1,"rps":1,"threads":1}
+4:50PM DBG response checks=[{"name":"","pass":true,"type":"httpCode","value":"404"},{"name":"","pass":true,"type":"httpBody","value":"<!DOCTYPE html>\n<html lang=en>\n  <meta charset=utf-8>\n  <meta name=viewport content=\"initial-scale=1..."}] code=404 latency=147 method=GET msgId=1 success=true threadId=0 url=https://www.google.com/unknown
+4:50PM DBG shutting down threadId=0
+4:50PM DBG threshold validation metric=checks passed=true rate=1 scenario={"name":"Check Error"} type=httpCode
+4:50PM INF result success=true totalDuration=3003.865
+Name: Ping Google
+Path: examples/00-ping-google.yaml
 ┌────────────────────┬───────┬──────┬─────────┬────────┬─────────┬─────────┬──────────────┬──────────────┬─────┬────────┐
 │ SCENARIO           │ TOTAL │ SENT │ SUCCESS │ FAILED │ TIMEOUT │ INVALID │ LATENCY @P99 │     DURATION │ RPS │ PASSED │
 ├────────────────────┼───────┼──────┼─────────┼────────┼─────────┼─────────┼──────────────┼──────────────┼─────┼────────┤
-│ Check 301 Redirect │     1 │    1 │       1 │      0 │       0 │       0 │ 867 ms       │ 1.001114208s │   1 │ OK     │
-│ Check 200 OK       │     1 │    1 │       1 │      0 │       0 │       0 │ 800 ms       │ 1.000531875s │   1 │ OK     │
-│ Check Error        │     1 │    1 │       1 │      0 │       0 │       0 │ 150 ms       │ 1.001080875s │   1 │ OK     │
+│ Check 301 Redirect │     1 │    1 │       1 │      0 │       0 │       0 │ 371 ms       │ 1.001213375s │   1 │ true   │
+│ Check 200 OK       │     2 │    2 │       2 │      0 │       0 │       0 │ 319 ms       │ 1.001165167s │   2 │ true   │
+│ Check Error        │     1 │    1 │       1 │      0 │       0 │       0 │ 147 ms       │  1.00031725s │   1 │ true   │
 └────────────────────┴───────┴──────┴─────────┴────────┴─────────┴─────────┴──────────────┴──────────────┴─────┴────────┘
-Total duration: 3.00286425s
+Total duration: 3.003865s
 OK
 ```
 
