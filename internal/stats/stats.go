@@ -42,6 +42,7 @@ type RequestCounters struct {
 	Timeout atomic.Int64
 	Invalid atomic.Int64
 
+	latencyLast   time.Duration
 	latencyMillis *hdrhistogram.Histogram
 	mu            sync.Mutex
 }
@@ -49,6 +50,8 @@ type RequestCounters struct {
 func (r *RequestCounters) RecordLatency(latency time.Duration) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	r.latencyLast = latency
 	return r.latencyMillis.RecordValue(latency.Milliseconds())
 }
 
@@ -56,4 +59,10 @@ func (r *RequestCounters) GetLatencyAtPercentile(percentile float64) int64 {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.latencyMillis.ValueAtPercentile(percentile)
+}
+
+func (r *RequestCounters) GetLastLatency() time.Duration {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.latencyLast
 }

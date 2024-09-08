@@ -15,11 +15,10 @@ type server struct {
 
 func (s *server) SendCounters(_ context.Context, counters *pb.Counters) (*pb.Result, error) {
 	log.Debug().
-		Str("name", counters.Name).
-		Str("value", counters.Value).
+		Str("instance", counters.Id).
 		Msg("counter received")
 
-	return &pb.Result{Msg: fmt.Sprintf("received %s=%s", counters.Name, counters.Value)}, nil
+	return &pb.Result{Msg: fmt.Sprintf("received id=%s", counters.Id)}, nil
 }
 
 func startGrpcServer(port int) (*grpc.Server, error) {

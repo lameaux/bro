@@ -7,8 +7,14 @@ service Metrics {
 }
 
 message Counters {
-  string name = 1;
-  string value = 2;
+  string id = 1;
+  int64 total = 2;
+  int64 sent = 3;
+  int64 success = 4;
+  int64 failed = 5;
+  int64 timeout = 6;
+  int64 invalid = 7;
+  int64 latency = 8;
 }
 
 message Result {
