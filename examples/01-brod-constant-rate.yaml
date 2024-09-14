@@ -1,13 +1,13 @@
-name: Simple Constant Rate Example
+name: Constant Rate Example
 httpClient:
   timeout: 1s
 scenarios:
-  - name: Constant rate demo
+  - name: 1k
     rps: 1000
     duration: 5s
     threads: 100
     httpRequest:
-      url: http://0.0.0.0:8080/static
+      url: http://0.0.0.0:9090/
     checks:
       - type: httpCode
         equals: 200
@@ -17,4 +17,4 @@ scenarios:
         minRate: 0.99
       - metric: latency
         type: p99
-        maxValue: 100ms
+        maxValue: 100

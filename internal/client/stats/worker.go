@@ -1,9 +1,10 @@
-package main
+package stats
 
 import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
+	"github.com/lameaux/bro/internal/client/grpc_client"
 	pb "github.com/lameaux/bro/protos/metrics"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
@@ -15,8 +16,8 @@ type BrodWorker struct {
 	InstanceID string
 }
 
-func NewBrodWorker(addr string) (*BrodWorker, error) {
-	conn, err := grpcConnection(addr)
+func NewWorker(addr string) (*BrodWorker, error) {
+	conn, err := grpc_client.GrpcConnection(addr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to %v: %w", addr, err)
 	}

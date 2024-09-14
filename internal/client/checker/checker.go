@@ -2,7 +2,7 @@ package checker
 
 import (
 	"fmt"
-	"github.com/lameaux/bro/internal/config"
+	"github.com/lameaux/bro/internal/client/config"
 	"io"
 	"net/http"
 	"strconv"

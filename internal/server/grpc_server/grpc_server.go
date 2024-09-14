@@ -1,7 +1,6 @@
-package main
+package grpc_server
 
 import (
-	"context"
 	"fmt"
 	pb "github.com/lameaux/bro/protos/metrics"
 	"github.com/rs/zerolog/log"
@@ -13,15 +12,7 @@ type server struct {
 	pb.UnimplementedMetricsServer
 }
 
-func (s *server) SendCounters(_ context.Context, counters *pb.Counters) (*pb.Result, error) {
-	log.Debug().
-		Str("instance", counters.Id).
-		Msg("counter received")
-
-	return &pb.Result{Msg: fmt.Sprintf("received id=%s", counters.Id)}, nil
-}
-
-func startGrpcServer(port int) (*grpc.Server, error) {
+func StartGrpcServer(port int) (*grpc.Server, error) {
 	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", port))
 	if err != nil {
 		return nil, fmt.Errorf("failed to listen: %w", err)
@@ -42,7 +33,7 @@ func startGrpcServer(port int) (*grpc.Server, error) {
 	return s, nil
 }
 
-func stopGrpcServer(s *grpc.Server) {
+func StopGrpcServer(s *grpc.Server) {
 	s.GracefulStop()
 
 	log.Debug().Msg("grpc server stopped")

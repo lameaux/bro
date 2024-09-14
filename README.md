@@ -204,7 +204,7 @@ broctl --debug
 See [examples](./examples) dir for testing examples:
 
 - [Ping Google](./examples/00-ping-google.yaml)
-- [Simple Constant Rate Example](./examples/01-simple-constant-rate.yaml)
+- [Constant Rate Example](./examples/01-brod-constant-rate.yaml)
 
 Check out [nft repo](https://github.com/lameaux/nft) for more examples.
 
@@ -212,7 +212,7 @@ Check out [nft repo](https://github.com/lameaux/nft) for more examples.
 
 ```yaml
 name: Example Config # string
-execution: serial # only serial for now
+parallel: false # only serial for now
 httpClient:
   timeout: 5s # duration
   maxIdleConnsPerHost: 100 # int

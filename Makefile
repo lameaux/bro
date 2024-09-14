@@ -5,7 +5,7 @@ DOCKER_REPO := ghcr.io
 DOCKER_IMAGE := lameaux/bro
 
 .PHONY: all
-all: clean build
+all: clean build test
 
 .PHONY: generate
 generate:
@@ -13,8 +13,12 @@ generate:
 
 .PHONY: build
 build:
-	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_DIR)/bro $(SRC_DIR)/cmd/bro/*.go
-	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_DIR)/brod $(SRC_DIR)/cmd/brod/*.go
+	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_DIR)/bro $(SRC_DIR)/cmd/client/*.go
+	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_DIR)/brod $(SRC_DIR)/cmd/server/*.go
+
+.PHONY: test
+test:
+	go test $(SRC_DIR)/...
 
 .PHONY: install
 install: build

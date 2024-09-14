@@ -17,6 +17,22 @@ message Counters {
   int64 latency = 8;
 }
 
+message HttpRequestsTotal {
+
+}
+
+message HttpRequestsFailedTotal {
+
+}
+
+message HttpResponsesTotal {
+
+}
+
+message HttpRequestDurationSec {
+
+}
+
 message Result {
   string msg = 1;
 }

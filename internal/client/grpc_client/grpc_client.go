@@ -1,11 +1,11 @@
-package main
+package grpc_client
 
 import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func grpcConnection(addr string) (*grpc.ClientConn, error) {
+func GrpcConnection(addr string) (*grpc.ClientConn, error) {
 	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err

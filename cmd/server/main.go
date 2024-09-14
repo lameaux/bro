@@ -4,13 +4,13 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"github.com/lameaux/bro/internal/banner"
-	"github.com/lameaux/bro/internal/metrics"
+	"github.com/lameaux/bro/internal/server/grpc_server"
+	"github.com/lameaux/bro/internal/server/metrics"
+	"github.com/lameaux/bro/internal/shared/banner"
+	"github.com/lameaux/bro/internal/shared/signals"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"os"
-	"os/signal"
-	"syscall"
 )
 
 const (
@@ -48,7 +48,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	grpcServer, err := startGrpcServer(*port)
+	grpcServer, err := grpc_server.StartGrpcServer(*port)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to start grpc server")
 		return
@@ -56,19 +56,10 @@ func main() {
 
 	var metricsServer = metrics.StartServer(*metricsPort)
 
-	handleSignals(func() {
+	signals.Handle(true, func() {
 		metrics.StopServer(ctx, metricsServer)
-		stopGrpcServer(grpcServer)
+		grpc_server.StopGrpcServer(grpcServer)
 
 		cancel()
 	})
-}
-
-func handleSignals(shutdownFn func()) {
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
-
-	sig := <-sigCh
-	log.Info().Str("signal", sig.String()).Msg("received signal")
-	shutdownFn()
 }

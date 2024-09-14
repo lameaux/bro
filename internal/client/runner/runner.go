@@ -4,39 +4,34 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/lameaux/bro/internal/checker"
-	"github.com/lameaux/bro/internal/config"
-	"github.com/lameaux/bro/internal/metrics"
-	"github.com/lameaux/bro/internal/stats"
-	"github.com/lameaux/bro/internal/thresholds"
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/lameaux/bro/internal/client/checker"
+	"github.com/lameaux/bro/internal/client/config"
+	"github.com/lameaux/bro/internal/client/thresholds"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
-	"math"
 	"net/http"
 	"net/url"
-	"strconv"
 	"time"
 )
 
 type contextKey string
 
 type Runner struct {
-	httpClient      *http.Client
-	scenario        *config.Scenario
-	requestCounters *stats.RequestCounters
+	httpClient *http.Client
+	scenario   *config.Scenario
+	listeners  []Listener
 }
 
-func New(httpClient *http.Client, scenario *config.Scenario) *Runner {
+func New(httpClient *http.Client, scenario *config.Scenario, listeners []Listener) *Runner {
 	return &Runner{
-		httpClient:      httpClient,
-		scenario:        scenario,
-		requestCounters: stats.NewRequestCounters(),
+		httpClient: httpClient,
+		scenario:   scenario,
+		listeners:  listeners,
 	}
 }
 
-func (r *Runner) Run(ctx context.Context) (*stats.RequestCounters, error) {
+func (r *Runner) Run(ctx context.Context) error {
 	log.Info().Dict(
 		"scenario",
 		zerolog.Dict().
@@ -58,13 +53,12 @@ func (r *Runner) Run(ctx context.Context) (*stats.RequestCounters, error) {
 	defer cancel()
 
 	if err := r.runSender(ctx, queue, stop); err != nil {
-		return nil, fmt.Errorf("failed sending requests: %w", err)
+		return fmt.Errorf("failed sending requests: %w", err)
 	}
 
-	r.requestCounters.Duration = time.Since(startTime)
-	r.requestCounters.Rps = math.Round(float64(r.requestCounters.Total.Load()) / r.requestCounters.Duration.Seconds())
+	r.notifySetDuration(time.Since(startTime))
 
-	return r.requestCounters, nil
+	return nil
 }
 
 func (r *Runner) startGenerator(ctx context.Context, queue chan<- int, stop chan struct{}) func() {
@@ -77,7 +71,7 @@ func (r *Runner) startGenerator(ctx context.Context, queue chan<- int, stop chan
 		generate := func() {
 			for i := 0; i < r.scenario.Rps(); i++ {
 				num++
-				r.requestCounters.Total.Add(1)
+				r.notifyIncCounter(CounterTotal)
 				queue <- num
 			}
 		}
@@ -169,22 +163,13 @@ func (r *Runner) processMessage(ctx context.Context, threadId int, msgId int) {
 		return
 	}
 
-	err = r.updateMetrics(resp, success, latency)
-	if err != nil {
-		log.Debug().
-			Int("threadId", threadId).
-			Int("msgId", msgId).
-			Err(err).
-			Msg("failed to update metrics")
-		return
-	}
+	r.notifyResults(resp, success, latency)
 
-	thresholds.UpdateCountersForScenario(r.scenario, checkResults)
+	thresholds.UpdateScenario(r.scenario, checkResults)
 }
 
 func (r *Runner) sendRequest(ctx context.Context) (*http.Response, error) {
-	r.requestCounters.Sent.Add(1)
-	metrics.HttpRequestsTotal.With(r.requestLabels()).Inc()
+	r.notifyIncCounter(CounterSent)
 
 	req, err := http.NewRequestWithContext(
 		ctx,
@@ -193,19 +178,17 @@ func (r *Runner) sendRequest(ctx context.Context) (*http.Response, error) {
 		r.scenario.HttpRequest.BodyReader(),
 	)
 	if err != nil {
-		r.requestCounters.Failed.Add(1)
-		r.countFailedRequest("format")
+		r.notifyIncCounterWithReason(CounterFailed, "format")
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 
 	res, err := r.httpClient.Do(req)
 	if err != nil {
 		if urlErr, ok := err.(*url.Error); ok && urlErr.Timeout() {
-			r.requestCounters.Timeout.Add(1)
-			r.countFailedRequest("timeout")
+			r.notifyIncCounter(CounterTimeout)
+			r.notifyIncCounterWithReason(CounterFailed, "timeout")
 		} else {
-			r.requestCounters.Failed.Add(1)
-			r.countFailedRequest("unknown")
+			r.notifyIncCounterWithReason(CounterFailed, "unknown")
 		}
 
 		return nil, fmt.Errorf("failed to send request: %w", err)
@@ -249,43 +232,15 @@ func (r *Runner) logCheckResults(
 	return nil
 }
 
-func (r *Runner) updateMetrics(response *http.Response, success bool, latency time.Duration) error {
+func (r *Runner) notifyResults(_ *http.Response, success bool, latency time.Duration) {
 	if success {
-		r.requestCounters.Success.Add(1)
+		r.notifyIncCounter(CounterSuccess)
 	} else {
-		r.requestCounters.Invalid.Add(1)
-		r.requestCounters.Failed.Add(1)
-
-		r.countFailedRequest("check")
+		r.notifyIncCounterWithReason(CounterInvalid, "check")
+		r.notifyIncCounterWithReason(CounterFailed, "check")
 	}
 
-	labels := r.responseLabels(response, success)
-	metrics.HttpResponsesTotal.With(labels).Inc()
-
-	if err := r.requestCounters.RecordLatency(latency); err != nil {
-		return fmt.Errorf("failed to record latency: %w", err)
-	}
-
-	labels = r.responseLabels(response, success)
-	metrics.HttpRequestDurationSec.With(labels).Observe(latency.Seconds())
-
-	return nil
-}
-
-func (r *Runner) requestLabels() prometheus.Labels {
-	return prometheus.Labels{
-		"scenario": r.scenario.Name,
-		"method":   r.scenario.HttpRequest.Method(),
-		"url":      r.scenario.HttpRequest.Url,
-	}
-}
-
-func (r *Runner) responseLabels(response *http.Response, success bool) prometheus.Labels {
-	labels := r.requestLabels()
-	labels["code"] = strconv.Itoa(response.StatusCode)
-	labels["success"] = strconv.FormatBool(success)
-
-	return labels
+	r.notifyRecordLatency(latency)
 }
 
 func (r *Runner) makeLogEvent(
@@ -314,8 +269,24 @@ func (r *Runner) makeLogEvent(
 	return logEvent, nil
 }
 
-func (r *Runner) countFailedRequest(reason string) {
-	labels := r.requestLabels()
-	labels["reason"] = reason
-	metrics.HttpRequestsFailedTotal.With(labels).Inc()
+func (r *Runner) notifySetDuration(duration time.Duration) {
+	for _, l := range r.listeners {
+		l.SetDuration(duration)
+	}
+}
+
+func (r *Runner) notifyRecordLatency(latency time.Duration) {
+	for _, l := range r.listeners {
+		l.RecordLatency(latency)
+	}
+}
+
+func (r *Runner) notifyIncCounter(name string) {
+	r.notifyIncCounterWithReason(name, "")
+}
+
+func (r *Runner) notifyIncCounterWithReason(name string, reason string) {
+	for _, l := range r.listeners {
+		l.IncCounter(name, reason)
+	}
 }

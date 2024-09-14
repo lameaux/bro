@@ -3,6 +3,7 @@ package metrics
 import (
 	"context"
 	"fmt"
+	"github.com/lameaux/bro/internal/shared/banner"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog/log"
@@ -50,6 +51,11 @@ func init() {
 }
 
 func StartServer(port int) *http.Server {
+	http.Handle("/", http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		writer.WriteHeader(http.StatusOK)
+		writer.Write([]byte(banner.Banner))
+	}))
+
 	http.Handle("/metrics", promhttp.Handler())
 
 	server := &http.Server{

@@ -2,8 +2,8 @@ package thresholds
 
 import (
 	"fmt"
-	"github.com/lameaux/bro/internal/checker"
-	"github.com/lameaux/bro/internal/config"
+	"github.com/lameaux/bro/internal/client/checker"
+	"github.com/lameaux/bro/internal/client/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"sync"
@@ -65,7 +65,7 @@ func AddScenario(scenario *config.Scenario) {
 	}
 }
 
-func UpdateCountersForScenario(
+func UpdateScenario(
 	scenario *config.Scenario,
 	results []checker.CheckResult,
 ) {

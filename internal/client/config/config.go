@@ -12,7 +12,7 @@ import (
 
 type Config struct {
 	Name       string      `yaml:"name"`
-	Execution  string      `yaml:"execution"`
+	Parallel   bool        `yaml:"parallel"`
 	HttpClient HttpClient  `yaml:"httpClient"`
 	Scenarios  []*Scenario `yaml:"scenarios"`
 
@@ -101,7 +101,7 @@ type Threshold struct {
 	MaxRate *float64 `yaml:"maxRate"`
 }
 
-func LoadFromFile(fileName string) (*Config, error) {
+func Load(fileName string) (*Config, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
