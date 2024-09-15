@@ -1,6 +1,7 @@
 package stats
 
 import (
+	"math"
 	"time"
 )
 
@@ -9,6 +10,7 @@ func New() *Stats {
 		startTime:        time.Now(),
 		requestCounters:  make(map[string]*RequestCounters),
 		thresholdsPassed: make(map[string]bool),
+		duration:         make(map[string]time.Duration),
 	}
 }
 
@@ -18,6 +20,7 @@ type Stats struct {
 
 	requestCounters  map[string]*RequestCounters
 	thresholdsPassed map[string]bool
+	duration         map[string]time.Duration
 }
 
 func (s *Stats) StopTimer() {
@@ -36,6 +39,14 @@ func (s *Stats) RequestCounters(scenarioName string) *RequestCounters {
 	return s.requestCounters[scenarioName]
 }
 
+func (s *Stats) SetDuration(scenarioName string, d time.Duration) {
+	s.duration[scenarioName] = d
+}
+
+func (s *Stats) Duration(scenarioName string) time.Duration {
+	return s.duration[scenarioName]
+}
+
 func (s *Stats) SetThresholdsPassed(scenarioName string, passed bool) {
 	s.thresholdsPassed[scenarioName] = passed
 }
@@ -52,4 +63,11 @@ func (s *Stats) AllThresholdsPassed() bool {
 	}
 
 	return true
+}
+
+func (s *Stats) Rps(scenarioName string) float64 {
+	total := s.RequestCounters(scenarioName).Counter(CounterTotal)
+	duration := s.Duration(scenarioName)
+
+	return math.Round(float64(total) / duration.Seconds())
 }

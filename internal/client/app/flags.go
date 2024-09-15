@@ -6,6 +6,8 @@ import (
 )
 
 type Flags struct {
+	Args []string
+
 	Debug        bool
 	Silent       bool
 	LogJson      bool
@@ -13,7 +15,7 @@ type Flags struct {
 	SkipResults  bool
 	SkipExitCode bool
 	BrodAddr     string
-	Args         []string
+	Group        string
 }
 
 func ParseFlags() *Flags {
@@ -24,6 +26,7 @@ func ParseFlags() *Flags {
 	skipResults := flag.Bool("skipResults", false, "skip results")
 	skipExitCode := flag.Bool("skipExitCode", false, "skip exit code")
 	brodAddr := flag.String("brodAddr", "", "brod address")
+	group := flag.String("group", "", "group")
 
 	flag.Parse()
 
@@ -35,6 +38,7 @@ func ParseFlags() *Flags {
 		SkipResults:  *skipResults,
 		SkipExitCode: *skipExitCode,
 		BrodAddr:     *brodAddr,
+		Group:        *group,
 
 		Args: flag.Args(),
 	}

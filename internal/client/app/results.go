@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/lameaux/bro/internal/client/config"
-	"github.com/lameaux/bro/internal/client/runner"
 	"github.com/lameaux/bro/internal/client/stats"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -16,7 +15,7 @@ func printResultsTable(conf *config.Config, results *stats.Stats, success bool) 
 
 	t := table.NewWriter()
 	t.SetOutputMirror(os.Stdout)
-	t.AppendHeader(table.Row{"Scenario", "Total", "Sent", "Success", "Failed", "Timeout", "Invalid", "Latency @P99", "Duration", "RPS", "Passed"})
+	t.AppendHeader(table.Row{"Scenario", "Total", "Success", "Failed", "Timeout", "Invalid", "Latency @P99", "Duration", "RPS", "Passed"})
 
 	for _, scenario := range conf.Scenarios {
 		counters := results.RequestCounters(scenario.Name)
@@ -29,15 +28,14 @@ func printResultsTable(conf *config.Config, results *stats.Stats, success bool) 
 
 		t.AppendRow(table.Row{
 			scenario.Name,
-			counters.GetCounter(runner.CounterTotal),
-			counters.GetCounter(runner.CounterSent),
-			counters.GetCounter(runner.CounterSuccess),
-			counters.GetCounter(runner.CounterFailed),
-			counters.GetCounter(runner.CounterTimeout),
-			counters.GetCounter(runner.CounterInvalid),
-			fmt.Sprintf("%d ms", counters.GetLatencyAtPercentile(99)),
-			counters.Duration,
-			counters.Rps(),
+			counters.Counter(stats.CounterTotal),
+			counters.Counter(stats.CounterSuccess),
+			counters.Counter(stats.CounterFailed),
+			counters.Counter(stats.CounterTimeout),
+			counters.Counter(stats.CounterInvalid),
+			fmt.Sprintf("%d ms", counters.LatencyAtPercentile(99)),
+			results.Duration(scenario.Name),
+			results.Rps(scenario.Name),
 			results.ThresholdsPassed(scenario.Name),
 		})
 

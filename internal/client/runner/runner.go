@@ -2,17 +2,12 @@ package runner
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"github.com/lameaux/bro/internal/client/checker"
 	"github.com/lameaux/bro/internal/client/config"
 	"github.com/lameaux/bro/internal/client/thresholds"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"golang.org/x/sync/errgroup"
 	"net/http"
-	"net/url"
-	"time"
 )
 
 type contextKey string
@@ -20,10 +15,10 @@ type contextKey string
 type Runner struct {
 	httpClient *http.Client
 	scenario   *config.Scenario
-	listeners  []Listener
+	listeners  []StatListener
 }
 
-func New(httpClient *http.Client, scenario *config.Scenario, listeners []Listener) *Runner {
+func New(httpClient *http.Client, scenario *config.Scenario, listeners []StatListener) *Runner {
 	return &Runner{
 		httpClient: httpClient,
 		scenario:   scenario,
@@ -47,8 +42,6 @@ func (r *Runner) Run(ctx context.Context) error {
 	queue := make(chan int, r.scenario.QueueSize())
 	stop := make(chan struct{})
 
-	startTime := time.Now()
-
 	cancel := r.startGenerator(ctx, queue, stop)
 	defer cancel()
 
@@ -56,237 +49,5 @@ func (r *Runner) Run(ctx context.Context) error {
 		return fmt.Errorf("failed sending requests: %w", err)
 	}
 
-	r.notifySetDuration(time.Since(startTime))
-
 	return nil
-}
-
-func (r *Runner) startGenerator(ctx context.Context, queue chan<- int, stop chan struct{}) func() {
-	durationTicker := time.NewTicker(r.scenario.Duration())
-	rateTicker := time.NewTicker(1 * time.Second)
-
-	go func() {
-		var num int
-
-		generate := func() {
-			for i := 0; i < r.scenario.Rps(); i++ {
-				num++
-				r.notifyIncCounter(CounterTotal)
-				queue <- num
-			}
-		}
-		// skip initial delay
-		generate()
-
-		for {
-			select {
-			case <-ctx.Done():
-				close(queue)
-				return
-			case <-durationTicker.C:
-				close(queue)
-				close(stop)
-				return
-			case <-rateTicker.C:
-				generate()
-			}
-		}
-	}()
-
-	return func() {
-		durationTicker.Stop()
-		rateTicker.Stop()
-	}
-}
-
-func (r *Runner) runSender(ctx context.Context, queue <-chan int, stop <-chan struct{}) error {
-	var g errgroup.Group
-	for t := 0; t < r.scenario.Threads(); t++ {
-		threadId := t
-		g.Go(func() error {
-			for {
-				select {
-				case <-stop:
-					log.Debug().Int("threadId", threadId).Msg("shutting down")
-					return nil
-				case <-ctx.Done():
-					return ctx.Err()
-				case msgId, ok := <-queue:
-					if !ok {
-						log.Debug().Int("threadId", threadId).Msg("shutting down")
-						return nil
-					}
-
-					r.processMessage(ctx, threadId, msgId)
-				}
-			}
-		})
-	}
-
-	return g.Wait()
-}
-
-func (r *Runner) processMessage(ctx context.Context, threadId int, msgId int) {
-	ctxWithValues := context.WithValue(ctx, contextKey("threadId"), threadId)
-	ctxWithValues = context.WithValue(ctxWithValues, contextKey("msgId"), msgId)
-
-	startTime := time.Now()
-	resp, err := r.sendRequest(ctxWithValues)
-	if err != nil {
-		log.Debug().
-			Int("threadId", threadId).
-			Int("msgId", msgId).
-			Err(err).
-			Msg("failed to send http request")
-		return
-	}
-	defer resp.Body.Close()
-
-	latency := time.Since(startTime)
-
-	checkResults, success := checker.Run(r.scenario.Checks, resp)
-
-	err = r.logCheckResults(
-		ctxWithValues,
-		resp,
-		latency,
-		r.scenario.Checks,
-		checkResults,
-		success,
-	)
-	if err != nil {
-		log.Debug().
-			Int("threadId", threadId).
-			Int("msgId", msgId).
-			Err(err).
-			Msg("failed to log check results")
-		return
-	}
-
-	r.notifyResults(resp, success, latency)
-
-	thresholds.UpdateScenario(r.scenario, checkResults)
-}
-
-func (r *Runner) sendRequest(ctx context.Context) (*http.Response, error) {
-	r.notifyIncCounter(CounterSent)
-
-	req, err := http.NewRequestWithContext(
-		ctx,
-		r.scenario.HttpRequest.Method(),
-		r.scenario.HttpRequest.Url,
-		r.scenario.HttpRequest.BodyReader(),
-	)
-	if err != nil {
-		r.notifyIncCounterWithReason(CounterFailed, "format")
-		return nil, fmt.Errorf("failed to create request: %w", err)
-	}
-
-	res, err := r.httpClient.Do(req)
-	if err != nil {
-		if urlErr, ok := err.(*url.Error); ok && urlErr.Timeout() {
-			r.notifyIncCounter(CounterTimeout)
-			r.notifyIncCounterWithReason(CounterFailed, "timeout")
-		} else {
-			r.notifyIncCounterWithReason(CounterFailed, "unknown")
-		}
-
-		return nil, fmt.Errorf("failed to send request: %w", err)
-	}
-
-	return res, nil
-}
-
-func (r *Runner) logCheckResults(
-	ctx context.Context,
-	response *http.Response,
-	latency time.Duration,
-	checks []config.Check,
-	results []checker.CheckResult,
-	success bool,
-) error {
-	logEvent, err := r.makeLogEvent(ctx, response, latency)
-	if err != nil {
-		return fmt.Errorf("failed to make LogEvent: %w", err)
-	}
-
-	checkResults := zerolog.Arr()
-	for i, check := range checks {
-		result := results[i]
-
-		checkResults = checkResults.Dict(
-			zerolog.Dict().
-				Str("type", check.Type).
-				Str("name", check.Name).
-				Str("value", result.Actual).
-				Bool("pass", result.Pass).
-				Err(result.Error),
-		)
-	}
-
-	logEvent.
-		Array("checks", checkResults).
-		Bool("success", success).
-		Msg("response")
-
-	return nil
-}
-
-func (r *Runner) notifyResults(_ *http.Response, success bool, latency time.Duration) {
-	if success {
-		r.notifyIncCounter(CounterSuccess)
-	} else {
-		r.notifyIncCounterWithReason(CounterInvalid, "check")
-		r.notifyIncCounterWithReason(CounterFailed, "check")
-	}
-
-	r.notifyRecordLatency(latency)
-}
-
-func (r *Runner) makeLogEvent(
-	ctx context.Context,
-	response *http.Response,
-	latency time.Duration,
-) (*zerolog.Event, error) {
-	threadId, ok := ctx.Value(contextKey("threadId")).(int)
-	if !ok {
-		return nil, errors.New("missing threadId")
-	}
-
-	msgId, ok := ctx.Value(contextKey("msgId")).(int)
-	if !ok {
-		return nil, errors.New("missing msgId")
-	}
-
-	logEvent := log.Debug().
-		Int("threadId", threadId).
-		Int("msgId", msgId).
-		Str("method", r.scenario.HttpRequest.Method()).
-		Str("url", r.scenario.HttpRequest.Url).
-		Int("code", response.StatusCode).
-		Int64("latency", latency.Milliseconds())
-
-	return logEvent, nil
-}
-
-func (r *Runner) notifySetDuration(duration time.Duration) {
-	for _, l := range r.listeners {
-		l.SetDuration(duration)
-	}
-}
-
-func (r *Runner) notifyRecordLatency(latency time.Duration) {
-	for _, l := range r.listeners {
-		l.RecordLatency(latency)
-	}
-}
-
-func (r *Runner) notifyIncCounter(name string) {
-	r.notifyIncCounterWithReason(name, "")
-}
-
-func (r *Runner) notifyIncCounterWithReason(name string, reason string) {
-	for _, l := range r.listeners {
-		l.IncCounter(name, reason)
-	}
 }

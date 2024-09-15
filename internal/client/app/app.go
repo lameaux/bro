@@ -10,6 +10,7 @@ import (
 	"github.com/lameaux/bro/internal/shared/httpclient"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"time"
 )
 
 const (
@@ -20,9 +21,9 @@ const (
 type App struct {
 	appName, appVersion, appBuild string
 
-	conf   *config.Config
-	flags  *Flags
-	worker *stats.BrodWorker
+	conf        *config.Config
+	flags       *Flags
+	statsWorker *stats.Worker
 }
 
 func New(appName, appVersion, appBuild string) (*App, error) {
@@ -36,9 +37,17 @@ func New(appName, appVersion, appBuild string) (*App, error) {
 	a.setupLog()
 	a.printAbout()
 
-	err := a.loadConfig()
-	if err != nil {
+	if err := a.loadConfig(); err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
+	}
+
+	if a.flags.BrodAddr != "" {
+		w, err := stats.NewWorker(a.flags.BrodAddr, a.flags.Group)
+		if err != nil {
+			return nil, fmt.Errorf("failed to start stats worker: %w", err)
+		}
+
+		a.statsWorker = w
 	}
 
 	return a, nil
@@ -67,9 +76,17 @@ func (a *App) runScenarios(ctx context.Context) *stats.Stats {
 		Msg("executing scenarios... press Ctrl+C (SIGINT) or send SIGTERM to terminate.")
 
 	for _, scenario := range a.conf.Scenarios {
-		counters := stats.NewRequestCounters(runner.CounterNames)
+		counters := stats.NewRequestCounters()
 
-		r := runner.New(httpClient, scenario, []runner.Listener{counters})
+		listeners := []runner.StatListener{counters}
+
+		if a.statsWorker != nil {
+			listeners = append(listeners, a.statsWorker.Counters())
+		}
+
+		r := runner.New(httpClient, scenario, listeners)
+
+		startTime := time.Now()
 
 		err := r.Run(ctx)
 		if err != nil {
@@ -80,6 +97,7 @@ func (a *App) runScenarios(ctx context.Context) *stats.Stats {
 		}
 
 		results.SetRequestCounters(scenario.Name, counters)
+		results.SetDuration(scenario.Name, time.Since(startTime))
 
 		passed, err := thresholds.ValidateScenario(scenario)
 		if err != nil {

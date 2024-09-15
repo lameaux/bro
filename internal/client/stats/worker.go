@@ -11,30 +11,38 @@ import (
 	"time"
 )
 
-type BrodWorker struct {
-	Conn       *grpc.ClientConn
-	InstanceID string
+type Worker struct {
+	conn *grpc.ClientConn
+
+	instanceID string
+	groupID    string
+
+	counters *RequestCounters
 }
 
-func NewWorker(addr string) (*BrodWorker, error) {
-	conn, err := grpc_client.GrpcConnection(addr)
+func NewWorker(serverAddr, groupId string) (*Worker, error) {
+	conn, err := grpc_client.GrpcConnection(serverAddr)
 	if err != nil {
-		return nil, fmt.Errorf("failed to connect to %v: %w", addr, err)
+		return nil, fmt.Errorf("failed to connect to %v: %w", serverAddr, err)
 	}
 
-	w := &BrodWorker{
-		Conn:       conn,
-		InstanceID: uuid.NewString(),
+	counters := NewRequestCounters()
+
+	w := &Worker{
+		conn:       conn,
+		instanceID: uuid.NewString(),
+		groupID:    groupId,
+		counters:   counters,
 	}
 
 	return w, nil
 }
 
-func (b *BrodWorker) Run(ctx context.Context) {
-	defer b.Conn.Close()
+func (b *Worker) Run(ctx context.Context) {
+	defer b.conn.Close()
 
 	log.Debug().
-		Str("instance", b.InstanceID).
+		Str("instance", b.instanceID).
 		Msg("started brod worker")
 
 	rateTicker := time.NewTicker(1 * time.Second)
@@ -51,14 +59,14 @@ func (b *BrodWorker) Run(ctx context.Context) {
 	}
 }
 
-func (b *BrodWorker) sendCounters(ctx context.Context) error {
-	c := pb.NewMetricsClient(b.Conn)
+func (b *Worker) sendCounters(ctx context.Context) error {
+	c := pb.NewMetricsClient(b.conn)
 
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
 	r, err := c.SendCounters(ctxWithTimeout, &pb.Counters{
-		Id: b.InstanceID,
+		Id: b.instanceID,
 	})
 
 	if err != nil {
@@ -68,4 +76,8 @@ func (b *BrodWorker) sendCounters(ctx context.Context) error {
 	log.Debug().Str("msg", r.Msg).Msg("counters sent")
 
 	return nil
+}
+
+func (b *Worker) Counters() *RequestCounters {
+	return b.counters
 }
