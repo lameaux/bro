@@ -19,15 +19,15 @@ func (r *Runner) trackResponse(resp *http.Response, success bool, latency time.D
 }
 
 func (r *Runner) labels(resp *http.Response) map[string]string {
-	m := map[string]string{
+	labelsMap := map[string]string{
 		"scenario": r.scenario.Name,
-		"method":   r.scenario.HttpRequest.Method(),
-		"url":      r.scenario.HttpRequest.Url,
+		"method":   r.scenario.HTTPRequest.Method(),
+		"url":      r.scenario.HTTPRequest.URL,
 	}
 
 	if resp != nil {
-		m["code"] = strconv.Itoa(resp.StatusCode)
+		labelsMap["code"] = strconv.Itoa(resp.StatusCode)
 	}
 
-	return m
+	return labelsMap
 }

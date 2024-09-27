@@ -1,14 +1,15 @@
 package httpclient
 
 import (
+	"net/http"
+
 	"github.com/lameaux/bro/internal/client/config"
 	"github.com/rs/zerolog/log"
-	"net/http"
 )
 
 const defaultMaxIdleConnsPerHost = 100
 
-func New(conf config.HttpClient) *http.Client {
+func New(conf config.HTTPClient) *http.Client {
 	maxIdleConnsPerHost := defaultMaxIdleConnsPerHost
 	if conf.MaxIdleConnsPerHost > 0 {
 		maxIdleConnsPerHost = conf.MaxIdleConnsPerHost
@@ -20,18 +21,18 @@ func New(conf config.HttpClient) *http.Client {
 		Int("maxIdleConnsPerHost", maxIdleConnsPerHost).
 		Msg("creating http client")
 
-	tr := &http.Transport{
+	transport := &http.Transport{
 		MaxIdleConnsPerHost: maxIdleConnsPerHost,
 		DisableKeepAlives:   conf.DisableKeepAlive,
 	}
 
 	client := &http.Client{
-		Transport: tr,
+		Transport: transport,
 		Timeout:   conf.Timeout,
 	}
 
 	if conf.DisableFollowRedirects {
-		client.CheckRedirect = func(req *http.Request, via []*http.Request) error {
+		client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
 			return http.ErrUseLastResponse
 		}
 	}

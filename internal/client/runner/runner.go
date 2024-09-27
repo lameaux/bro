@@ -3,11 +3,12 @@ package runner
 import (
 	"context"
 	"fmt"
+	"net/http"
+
 	"github.com/lameaux/bro/internal/client/config"
 	"github.com/lameaux/bro/internal/client/thresholds"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"net/http"
 )
 
 type contextKey string

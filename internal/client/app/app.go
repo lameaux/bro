@@ -3,6 +3,8 @@ package app
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/lameaux/bro/internal/client/config"
 	"github.com/lameaux/bro/internal/client/runner"
 	"github.com/lameaux/bro/internal/client/stats"
@@ -10,7 +12,6 @@ import (
 	"github.com/lameaux/bro/internal/shared/httpclient"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"time"
 )
 
 const (
@@ -27,30 +28,30 @@ type App struct {
 }
 
 func New(appName, appVersion, appBuild string) (*App, error) {
-	a := &App{
+	application := &App{
 		appName:    appName,
 		appVersion: appVersion,
 		appBuild:   appBuild,
 		flags:      ParseFlags(),
 	}
 
-	a.setupLog()
-	a.printAbout()
+	application.setupLog()
+	application.printAbout()
 
-	if err := a.loadConfig(); err != nil {
+	if err := application.loadConfig(); err != nil {
 		return nil, fmt.Errorf("failed to load config: %w", err)
 	}
 
-	if a.flags.BrodAddr != "" {
-		w, err := stats.NewWorker(a.flags.BrodAddr, a.flags.Group)
+	if application.flags.BrodAddr != "" {
+		w, err := stats.NewWorker(application.flags.BrodAddr, application.flags.Group)
 		if err != nil {
 			return nil, fmt.Errorf("failed to start stats worker: %w", err)
 		}
 
-		a.statsWorker = w
+		application.statsWorker = w
 	}
 
-	return a, nil
+	return application, nil
 }
 
 func (a *App) Run(ctx context.Context) int {
@@ -69,7 +70,7 @@ func (a *App) runScenarios(ctx context.Context) *stats.Stats {
 	results := stats.New()
 	defer results.StopTimer()
 
-	httpClient := httpclient.New(a.conf.HttpClient)
+	httpClient := httpclient.New(a.conf.HTTPClient)
 
 	log.Info().
 		Bool("parallel", a.conf.Parallel).
@@ -93,6 +94,7 @@ func (a *App) runScenarios(ctx context.Context) *stats.Stats {
 			log.Error().Err(err).
 				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
 				Msg("failed to run scenario")
+
 			continue
 		}
 
@@ -104,6 +106,7 @@ func (a *App) runScenarios(ctx context.Context) *stats.Stats {
 			log.Warn().
 				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
 				Msg("failed to validate thresholds")
+
 			continue
 		}
 
@@ -122,7 +125,9 @@ func (a *App) processResults(runStats *stats.Stats) bool {
 		Msg("result")
 
 	if !a.flags.SkipResults {
-		printResultsTable(a.conf, runStats, success)
+		formattedOutput := resultsTable(a.conf, runStats, success)
+
+		fmt.Println(formattedOutput) //nolint:forbidigo
 	}
 
 	return success

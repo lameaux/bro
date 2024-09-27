@@ -25,10 +25,12 @@ func (r *Runner) startGenerator(ctx context.Context, queue chan<- int, stop chan
 			select {
 			case <-ctx.Done():
 				close(queue)
+
 				return
 			case <-durationTicker.C:
 				close(queue)
 				close(stop)
+
 				return
 			case <-rateTicker.C:
 				generate()

@@ -1,11 +1,12 @@
-package grpc_server
+package grpcserver
 
 import (
 	"fmt"
+	"net"
+
 	pb "github.com/lameaux/bro/protos/metrics"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
-	"net"
 )
 
 type server struct {
@@ -17,11 +18,12 @@ func StartGrpcServer(port int) (*grpc.Server, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to listen: %w", err)
 	}
-	s := grpc.NewServer()
-	pb.RegisterMetricsServer(s, &server{})
+
+	newServer := grpc.NewServer()
+	pb.RegisterMetricsServer(newServer, &server{})
 
 	go func() {
-		if err = s.Serve(lis); err != nil {
+		if err = newServer.Serve(lis); err != nil {
 			log.Fatal().Err(err).
 				Int("port", port).
 				Msg("failed to start grpc server")
@@ -30,7 +32,7 @@ func StartGrpcServer(port int) (*grpc.Server, error) {
 
 	log.Debug().Int("port", port).Msg("grpc server started")
 
-	return s, nil
+	return newServer, nil
 }
 
 func StopGrpcServer(s *grpc.Server) {

@@ -1,18 +1,21 @@
 package thresholds
 
 import (
-	"fmt"
+	"errors"
+	"sync"
+
 	"github.com/lameaux/bro/internal/client/checker"
 	"github.com/lameaux/bro/internal/client/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"sync"
 )
 
 const (
 	metricChecks  = "checks"
 	metricLatency = "latency"
 )
+
+var errMissingCheckCounters = errors.New("missing check counters")
 
 type CheckCounters struct {
 	mu     sync.RWMutex
@@ -56,7 +59,8 @@ func (cc *CheckCounters) Rate(checkType string) float64 {
 	return float64(cc.passed[checkType]) / float64(cc.total[checkType])
 }
 
-var scenarioCounters = make(map[string]*CheckCounters)
+// FIXME: refactor into struct.
+var scenarioCounters = make(map[string]*CheckCounters) //nolint:gochecknoglobals
 
 func AddScenario(scenario *config.Scenario) {
 	scenarioCounters[scenario.Name] = &CheckCounters{
@@ -69,7 +73,6 @@ func UpdateScenario(
 	scenario *config.Scenario,
 	results []checker.CheckResult,
 ) {
-
 	checkCounters := scenarioCounters[scenario.Name]
 
 	for i, check := range scenario.Checks {
@@ -85,7 +88,7 @@ func ValidateScenario(scenario *config.Scenario) (success bool, err error) {
 		if threshold.Metric == metricChecks {
 			checkCounters, ok := scenarioCounters[scenario.Name]
 			if !ok {
-				return false, fmt.Errorf("missing check counters for: %v", scenario.Name)
+				return false, errMissingCheckCounters
 			}
 
 			passed := true
@@ -102,9 +105,9 @@ func ValidateScenario(scenario *config.Scenario) (success bool, err error) {
 
 			var logEvent *zerolog.Event
 			if passed {
-				logEvent = log.Debug()
+				logEvent = log.Debug() //nolint:zerologlint
 			} else {
-				logEvent = log.Error()
+				logEvent = log.Error() //nolint:zerologlint
 			}
 
 			logEvent.
@@ -125,5 +128,5 @@ func ValidateScenario(scenario *config.Scenario) (success bool, err error) {
 		}
 	}
 
-	return
+	return success, err
 }

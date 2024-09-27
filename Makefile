@@ -4,6 +4,8 @@ GIT_HASH := $(shell git rev-parse --short HEAD)
 DOCKER_REPO := ghcr.io
 DOCKER_IMAGE := lameaux/bro
 
+GO_FILES := $(shell find $(SRC_DIR) -name '*.go')
+
 .PHONY: all
 all: clean build test
 
@@ -16,14 +18,37 @@ build:
 	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_DIR)/bro $(SRC_DIR)/cmd/client/*.go
 	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_DIR)/brod $(SRC_DIR)/cmd/server/*.go
 
+.PHONY: fmt
+fmt:
+	@echo "Running gofumpt..."
+	gofumpt -l -w $(GO_FILES)
+	@echo "gofumpt done."
+
+.PHONY: fmt-install
+fmt-install:
+	go install mvdan.cc/gofumpt@latest
+
+.PHONY: lint
+lint:
+	golangci-lint run
+
+.PHONY: lint-install
+lint-install:
+	go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+
 .PHONY: test
 test:
-	go test $(SRC_DIR)/...
+	go test $(SRC_DIR)/... -coverprofile=coverage.out
 
 .PHONY: install
 install: build
 	mv $(BUILD_DIR)/bro $(GOPATH)/bin
 	mv $(BUILD_DIR)/brod $(GOPATH)/bin
+
+.PHONY: coverage
+coverage:
+	go tool cover -func coverage.out | grep "total:" | \
+	awk '{print ((int($$3) > 80) != 1) }'
 
 .PHONY: run
 run: build

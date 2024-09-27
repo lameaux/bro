@@ -1,0 +1,20 @@
+run:
+  timeout: 10s
+  allow-parallel-runners: true
+
+linters:
+  enable-all: true
+  disable:
+    - depguard
+    - execinquery
+    - gomnd
+    - exportloopref
+    - exhaustruct
+    - godox
+    - intrange
+
+linters-settings:
+  gci:
+    skip-generated: true
+  varnamelen:
+    ignore-type-assert-ok: true

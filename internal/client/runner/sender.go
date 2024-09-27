@@ -3,12 +3,13 @@ package runner
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"time"
+
 	"github.com/lameaux/bro/internal/client/checker"
 	"github.com/lameaux/bro/internal/client/thresholds"
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
-	"net/http"
-	"time"
 )
 
 type SenderError struct {
@@ -21,47 +22,52 @@ func (e *SenderError) Error() string {
 }
 
 func (r *Runner) runSender(ctx context.Context, queue <-chan int, stop <-chan struct{}) error {
-	var g errgroup.Group
+	var errGrp errgroup.Group
+
 	for t := 0; t < r.scenario.Threads(); t++ {
-		threadId := t
-		g.Go(func() error {
+		threadID := t
+
+		errGrp.Go(func() error {
 			for {
 				select {
 				case <-stop:
-					log.Debug().Int("threadId", threadId).Msg("shutting down")
+					log.Debug().Int("threadID", threadID).Msg("shutting down")
+
 					return nil
 				case <-ctx.Done():
 					return ctx.Err()
-				case msgId, ok := <-queue:
+				case msgID, ok := <-queue:
 					if !ok {
-						log.Debug().Int("threadId", threadId).Msg("shutting down")
+						log.Debug().Int("threadID", threadID).Msg("shutting down")
+
 						return nil
 					}
 
-					r.processMessage(ctx, threadId, msgId)
+					r.processMessage(ctx, threadID, msgID)
 				}
 			}
 		})
 	}
 
-	return g.Wait()
+	return errGrp.Wait() //nolint:wrapcheck
 }
 
-func (r *Runner) processMessage(ctx context.Context, threadId int, msgId int) {
-	ctxWithValues := context.WithValue(ctx, contextKey("threadId"), threadId)
-	ctxWithValues = context.WithValue(ctxWithValues, contextKey("msgId"), msgId)
+func (r *Runner) processMessage(ctx context.Context, threadID int, msgID int) {
+	ctxWithValues := context.WithValue(ctx, contextKey("threadID"), threadID)
+	ctxWithValues = context.WithValue(ctxWithValues, contextKey("msgID"), msgID)
 
 	startTime := time.Now()
 
 	resp, err := r.sendRequest(ctxWithValues)
 	if err != nil {
 		log.Debug().
-			Int("threadId", threadId).
-			Int("msgId", msgId).
+			Int("threadID", threadID).
+			Int("msgID", msgID).
 			Err(err).
 			Msg("failed to send http request")
 
 		r.trackError(err)
+
 		return
 	}
 	defer resp.Body.Close()
@@ -87,9 +93,9 @@ func (r *Runner) processMessage(ctx context.Context, threadId int, msgId int) {
 func (r *Runner) sendRequest(ctx context.Context) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(
 		ctx,
-		r.scenario.HttpRequest.Method(),
-		r.scenario.HttpRequest.Url,
-		r.scenario.HttpRequest.BodyReader(),
+		r.scenario.HTTPRequest.Method(),
+		r.scenario.HTTPRequest.URL,
+		r.scenario.HTTPRequest.BodyReader(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)

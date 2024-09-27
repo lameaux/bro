@@ -3,12 +3,18 @@ package runner
 import (
 	"context"
 	"errors"
+	"net/http"
+	"time"
+
 	"github.com/lameaux/bro/internal/client/checker"
 	"github.com/lameaux/bro/internal/client/config"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"net/http"
-	"time"
+)
+
+var (
+	errMissingMsgID    = errors.New("missing msgID")
+	errMissingThreadID = errors.New("missing threadID")
 )
 
 func (r *Runner) makeLogEvent(
@@ -16,23 +22,23 @@ func (r *Runner) makeLogEvent(
 	response *http.Response,
 	latency time.Duration,
 ) (*zerolog.Event, error) {
-	threadId, ok := ctx.Value(contextKey("threadId")).(int)
+	threadID, ok := ctx.Value(contextKey("threadID")).(int)
 	if !ok {
-		return nil, errors.New("missing threadId")
+		return nil, errMissingThreadID
 	}
 
-	msgId, ok := ctx.Value(contextKey("msgId")).(int)
+	msgID, ok := ctx.Value(contextKey("msgID")).(int)
 	if !ok {
-		return nil, errors.New("missing msgId")
+		return nil, errMissingMsgID
 	}
 
-	logEvent := log.Debug().
-		Int("threadId", threadId).
-		Int("msgId", msgId).
-		Str("method", r.scenario.HttpRequest.Method()).
-		Str("url", r.scenario.HttpRequest.Url).
-		Int("code", response.StatusCode).
-		Int64("latency", latency.Milliseconds())
+	logEvent := log.Debug(). //nolint:zerologlint
+					Int("threadID", threadID).
+					Int("msgID", msgID).
+					Str("method", r.scenario.HTTPRequest.Method()).
+					Str("url", r.scenario.HTTPRequest.URL).
+					Int("code", response.StatusCode).
+					Int64("latency", latency.Milliseconds())
 
 	return logEvent, nil
 }
@@ -48,10 +54,12 @@ func (r *Runner) logCheckResults(
 	logEvent, err := r.makeLogEvent(ctx, response, latency)
 	if err != nil {
 		log.Warn().Err(err).Msg("failed to log check results")
+
 		return
 	}
 
 	checkResults := zerolog.Arr()
+
 	for i, check := range checks {
 		result := results[i]
 

@@ -2,24 +2,25 @@ package config
 
 import (
 	"fmt"
-	"gopkg.in/yaml.v3"
 	"io"
 	"net/http"
 	"os"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 )
 
 type Config struct {
 	Name       string      `yaml:"name"`
 	Parallel   bool        `yaml:"parallel"`
-	HttpClient HttpClient  `yaml:"httpClient"`
+	HTTPClient HTTPClient  `yaml:"httpClient"`
 	Scenarios  []*Scenario `yaml:"scenarios"`
 
-	FileName string
+	FileName string `yaml:"-"`
 }
 
-type HttpClient struct {
+type HTTPClient struct {
 	MaxIdleConnsPerHost    int           `yaml:"maxIdleConnsPerHost"`
 	DisableKeepAlive       bool          `yaml:"disableKeepAlive"`
 	Timeout                time.Duration `yaml:"timeout"`
@@ -35,7 +36,7 @@ type Scenario struct {
 	QueueSizeRaw int           `yaml:"queueSize"`
 
 	PayloadType string      `yaml:"payloadType"`
-	HttpRequest HttpRequest `yaml:"httpRequest"`
+	HTTPRequest HTTPRequest `yaml:"httpRequest"`
 	Checks      []Check     `yaml:"checks"`
 	Thresholds  []Threshold `yaml:"thresholds"`
 }
@@ -56,22 +57,21 @@ func (s *Scenario) QueueSize() int {
 	return max(s.QueueSizeRaw, s.Threads())
 }
 
-type HttpRequest struct {
-	Url       string  `yaml:"url"`
+type HTTPRequest struct {
+	URL       string  `yaml:"url"`
 	MethodRaw *string `yaml:"method"`
 	BodyRaw   *string `yaml:"body"`
 }
 
-func (r *HttpRequest) Method() string {
+func (r *HTTPRequest) Method() string {
 	if r.MethodRaw != nil {
 		return *r.MethodRaw
-
 	}
 
 	return http.MethodGet
 }
 
-func (r *HttpRequest) BodyReader() io.Reader {
+func (r *HTTPRequest) BodyReader() io.Reader {
 	if r.BodyRaw != nil {
 		return strings.NewReader(*r.BodyRaw)
 	}
@@ -108,12 +108,14 @@ func Load(fileName string) (*Config, error) {
 	}
 	defer file.Close()
 
-	var c Config
+	var conf Config
+
 	d := yaml.NewDecoder(file)
-	if err = d.Decode(&c); err != nil {
+	if err = d.Decode(&conf); err != nil {
 		return nil, fmt.Errorf("failed to parse file: %w", err)
 	}
-	c.FileName = fileName
 
-	return &c, nil
+	conf.FileName = fileName
+
+	return &conf, nil
 }

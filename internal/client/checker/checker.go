@@ -1,21 +1,25 @@
 package checker
 
 import (
+	"errors"
 	"fmt"
-	"github.com/lameaux/bro/internal/client/config"
 	"io"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/lameaux/bro/internal/client/config"
 )
 
 const (
 	maxBodyLength = 100
 
-	typeHttpCode   = "httpCode"
-	typeHttpHeader = "httpHeader"
-	typeHttpBody   = "httpBody"
+	typeHTTPCode   = "httpCode"
+	typeHTTPHeader = "httpHeader"
+	typeHTTPBody   = "httpBody"
 )
+
+var errUnknownCheckType = errors.New("unknown check type")
 
 type CheckResult struct {
 	Actual string
@@ -24,79 +28,84 @@ type CheckResult struct {
 }
 
 func Run(checks []config.Check, response *http.Response) ([]CheckResult, bool) {
-	var results []CheckResult
+	results := make([]CheckResult, len(checks))
 
 	success := true
-	for _, check := range checks {
+
+	for i, check := range checks {
 		result := runCheck(check, response)
-		results = append(results, result)
+		results[i] = result
 
 		if !result.Pass {
 			success = false
 		}
-
 	}
 
 	return results, success
 }
 
 func runCheck(check config.Check, response *http.Response) CheckResult {
-	if check.Type == typeHttpCode {
-		return checkHttpCode(check, response)
+	if check.Type == typeHTTPCode {
+		return checkHTTPCode(check, response)
 	}
 
-	if check.Type == typeHttpHeader {
-		return checkHttpHeader(check, response)
+	if check.Type == typeHTTPHeader {
+		return checkHTTPHeader(check, response)
 	}
 
-	if check.Type == typeHttpBody {
-		return checkHttpBody(check, response)
+	if check.Type == typeHTTPBody {
+		return checkHTTPBody(check, response)
 	}
 
 	return CheckResult{
-		Error: fmt.Errorf("unknown check type: %v", check.Type),
+		Error: errUnknownCheckType,
 	}
 }
 
-func checkHttpCode(check config.Check, response *http.Response) CheckResult {
+func checkHTTPCode(check config.Check, response *http.Response) CheckResult {
 	var result CheckResult
 
 	result.Actual = strconv.Itoa(response.StatusCode)
 
 	if check.Equals != "" {
 		result.Pass = result.Actual == check.Equals
+
 		return result
 	}
 
 	return result
 }
 
-func checkHttpHeader(check config.Check, response *http.Response) CheckResult {
+func checkHTTPHeader(check config.Check, response *http.Response) CheckResult {
 	var result CheckResult
 
 	result.Actual = response.Header.Get(check.Name)
 
 	if check.Equals != "" {
 		result.Pass = result.Actual == check.Equals
+
 		return result
 	}
 
 	if check.Contains != "" {
 		result.Pass = strings.Contains(result.Actual, check.Contains)
+
 		return result
 	}
 
 	return result
 }
 
-func checkHttpBody(check config.Check, response *http.Response) CheckResult {
+func checkHTTPBody(check config.Check, response *http.Response) CheckResult {
 	var result CheckResult
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
 		result.Error = fmt.Errorf("failed to read response body: %w", err)
+
 		return result
 	}
+
 	bodyString := string(body)
 
 	if len(bodyString) > maxBodyLength {
@@ -107,11 +116,13 @@ func checkHttpBody(check config.Check, response *http.Response) CheckResult {
 
 	if check.Equals != "" {
 		result.Pass = bodyString == check.Equals
+
 		return result
 	}
 
 	if check.Contains != "" {
 		result.Pass = strings.Contains(bodyString, check.Contains)
+
 		return result
 	}
 

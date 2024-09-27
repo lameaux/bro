@@ -2,6 +2,7 @@ package app
 
 import (
 	"flag"
+
 	"github.com/rs/zerolog/log"
 )
 
@@ -10,7 +11,7 @@ type Flags struct {
 
 	Debug        bool
 	Silent       bool
-	LogJson      bool
+	LogJSON      bool
 	SkipBanner   bool
 	SkipResults  bool
 	SkipExitCode bool
@@ -21,7 +22,7 @@ type Flags struct {
 func ParseFlags() *Flags {
 	debug := flag.Bool("debug", false, "enable debug mode")
 	silent := flag.Bool("silent", false, "enable silent mode")
-	logJson := flag.Bool("logJson", false, "log as json")
+	logJSON := flag.Bool("logJson", false, "log as json")
 	skipBanner := flag.Bool("skipBanner", false, "skip banner")
 	skipResults := flag.Bool("skipResults", false, "skip results")
 	skipExitCode := flag.Bool("skipExitCode", false, "skip exit code")
@@ -30,10 +31,10 @@ func ParseFlags() *Flags {
 
 	flag.Parse()
 
-	f := &Flags{
+	flags := &Flags{
 		Debug:        *debug,
 		Silent:       *silent,
-		LogJson:      *logJson,
+		LogJSON:      *logJSON,
 		SkipBanner:   *skipBanner,
 		SkipResults:  *skipResults,
 		SkipExitCode: *skipExitCode,
@@ -43,7 +44,7 @@ func ParseFlags() *Flags {
 		Args: flag.Args(),
 	}
 
-	log.Debug().Any("flags", f).Msg("flags parsed")
+	log.Debug().Any("flags", flags).Msg("flags parsed")
 
-	return f
+	return flags
 }

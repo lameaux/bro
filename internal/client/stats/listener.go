@@ -1,5 +1,4 @@
 package stats
 
 func Listen() {
-
 }

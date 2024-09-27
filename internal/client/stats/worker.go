@@ -3,12 +3,13 @@ package stats
 import (
 	"context"
 	"fmt"
+	"time"
+
 	"github.com/google/uuid"
-	"github.com/lameaux/bro/internal/client/grpc_client"
+	"github.com/lameaux/bro/internal/client/grpcclient"
 	pb "github.com/lameaux/bro/protos/metrics"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
-	"time"
 )
 
 type Worker struct {
@@ -20,22 +21,22 @@ type Worker struct {
 	counters *RequestCounters
 }
 
-func NewWorker(serverAddr, groupId string) (*Worker, error) {
-	conn, err := grpc_client.GrpcConnection(serverAddr)
+func NewWorker(serverAddr, groupID string) (*Worker, error) {
+	conn, err := grpcclient.GrpcConnection(serverAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to %v: %w", serverAddr, err)
 	}
 
 	counters := NewRequestCounters()
 
-	w := &Worker{
+	worker := &Worker{
 		conn:       conn,
 		instanceID: uuid.NewString(),
-		groupID:    groupId,
+		groupID:    groupID,
 		counters:   counters,
 	}
 
-	return w, nil
+	return worker, nil
 }
 
 func (b *Worker) Run(ctx context.Context) {
@@ -65,15 +66,14 @@ func (b *Worker) sendCounters(ctx context.Context) error {
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
 
-	r, err := c.SendCounters(ctxWithTimeout, &pb.Counters{
+	result, err := c.SendCounters(ctxWithTimeout, &pb.Counters{
 		Id: b.instanceID,
 	})
-
 	if err != nil {
 		return fmt.Errorf("failed to send counters: %w", err)
 	}
 
-	log.Debug().Str("msg", r.Msg).Msg("counters sent")
+	log.Debug().Str("msg", result.GetMsg()).Msg("counters sent")
 
 	return nil
 }

@@ -1,21 +1,23 @@
 package app
 
 import (
+	"os"
+
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
-	"os"
 )
 
 func (a *App) setupLog() {
-	if a.flags.Debug {
+	switch {
+	case a.flags.Debug:
 		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	} else if a.flags.Silent {
+	case a.flags.Silent:
 		zerolog.SetGlobalLevel(zerolog.ErrorLevel)
-	} else {
+	default:
 		zerolog.SetGlobalLevel(zerolog.InfoLevel)
 	}
 
-	if !a.flags.LogJson {
+	if !a.flags.LogJSON {
 		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	}
 }
