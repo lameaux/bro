@@ -2,6 +2,7 @@ package thresholds
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/lameaux/bro/internal/client/checker"
@@ -81,42 +82,15 @@ func UpdateScenario(
 	}
 }
 
-func ValidateScenario(scenario *config.Scenario) (success bool, err error) {
-	success = true
+func ValidateScenario(scenario *config.Scenario) (bool, error) {
+	success := true
 
 	for _, threshold := range scenario.Thresholds {
 		if threshold.Metric == metricChecks {
-			checkCounters, ok := scenarioCounters[scenario.Name]
-			if !ok {
-				return false, errMissingCheckCounters
+			passed, err := validateMetricCheck(scenario, threshold)
+			if err != nil {
+				return false, fmt.Errorf("failed to validate metric check: %w", err)
 			}
-
-			passed := true
-
-			rate := checkCounters.Rate(threshold.Type)
-
-			if threshold.MinRate != nil && *threshold.MinRate > rate {
-				passed = false
-			}
-
-			if threshold.MaxRate != nil && *threshold.MaxRate < rate {
-				passed = false
-			}
-
-			var logEvent *zerolog.Event
-			if passed {
-				logEvent = log.Debug() //nolint:zerologlint
-			} else {
-				logEvent = log.Error() //nolint:zerologlint
-			}
-
-			logEvent.
-				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
-				Str("metric", threshold.Metric).
-				Str("type", threshold.Type).
-				Float64("rate", rate).
-				Bool("passed", passed).
-				Msg("threshold validation")
 
 			if !passed {
 				success = false
@@ -128,5 +102,41 @@ func ValidateScenario(scenario *config.Scenario) (success bool, err error) {
 		}
 	}
 
-	return success, err
+	return success, nil
+}
+
+func validateMetricCheck(scenario *config.Scenario, threshold config.Threshold) (bool, error) {
+	checkCounters, ok := scenarioCounters[scenario.Name]
+	if !ok {
+		return false, errMissingCheckCounters
+	}
+
+	passed := true
+
+	rate := checkCounters.Rate(threshold.Type)
+
+	if threshold.MinRate != nil && *threshold.MinRate > rate {
+		passed = false
+	}
+
+	if threshold.MaxRate != nil && *threshold.MaxRate < rate {
+		passed = false
+	}
+
+	var logEvent *zerolog.Event
+	if passed {
+		logEvent = log.Debug() //nolint:zerologlint
+	} else {
+		logEvent = log.Error() //nolint:zerologlint
+	}
+
+	logEvent.
+		Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
+		Str("metric", threshold.Metric).
+		Str("type", threshold.Type).
+		Float64("rate", rate).
+		Bool("passed", passed).
+		Msg("threshold validation")
+
+	return passed, nil
 }

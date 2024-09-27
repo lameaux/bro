@@ -7,10 +7,11 @@
 package metrics
 
 import (
-	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
-	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
 	sync "sync"
+
+	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
+	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 )
 
 const (
@@ -211,11 +212,13 @@ func file_protos_metrics_metrics_proto_rawDescGZIP() []byte {
 	return file_protos_metrics_metrics_proto_rawDescData
 }
 
-var file_protos_metrics_metrics_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_protos_metrics_metrics_proto_goTypes = []any{
-	(*Counters)(nil), // 0: metrics.Counters
-	(*Result)(nil),   // 1: metrics.Result
-}
+var (
+	file_protos_metrics_metrics_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+	file_protos_metrics_metrics_proto_goTypes  = []any{
+		(*Counters)(nil), // 0: metrics.Counters
+		(*Result)(nil),   // 1: metrics.Result
+	}
+)
 var file_protos_metrics_metrics_proto_depIdxs = []int32{
 	0, // 0: metrics.Metrics.sendCounters:input_type -> metrics.Counters
 	1, // 1: metrics.Metrics.sendCounters:output_type -> metrics.Result
