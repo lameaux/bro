@@ -7,7 +7,7 @@ DOCKER_IMAGE := lameaux/bro
 GO_FILES := $(shell find $(SRC_DIR) -name '*.go')
 
 .PHONY: all
-all: clean build test
+all: clean build lint test
 
 .PHONY: generate
 generate:
@@ -20,9 +20,7 @@ build:
 
 .PHONY: fmt
 fmt:
-	@echo "Running gofumpt..."
 	gofumpt -l -w $(GO_FILES)
-	@echo "gofumpt done."
 
 .PHONY: fmt-install
 fmt-install:
@@ -40,15 +38,16 @@ lint-install:
 test:
 	go test $(SRC_DIR)/... -coverprofile=coverage.out
 
-.PHONY: install
-install: build
-	mv $(BUILD_DIR)/bro $(GOPATH)/bin
-	mv $(BUILD_DIR)/brod $(GOPATH)/bin
-
 .PHONY: coverage
 coverage:
 	go tool cover -func coverage.out | grep "total:" | \
 	awk '{print ((int($$3) > 80) != 1) }'
+
+
+.PHONY: install
+install: build
+	mv $(BUILD_DIR)/bro $(GOPATH)/bin
+	mv $(BUILD_DIR)/brod $(GOPATH)/bin
 
 .PHONY: run
 run: build
