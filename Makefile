@@ -4,7 +4,7 @@ GIT_HASH := $(shell git rev-parse --short HEAD)
 DOCKER_REPO := ghcr.io
 DOCKER_IMAGE := lameaux/bro
 
-GO_FILES := $(shell find $(SRC_DIR) -name '*.go')
+GO_FILES := $(shell find $(SRC_DIR) -name '*.go' ! -path '$(SRC_DIR)/protos/*go')
 
 .PHONY: all
 all: clean build lint test
