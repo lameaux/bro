@@ -3,10 +3,12 @@ package thresholds
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 
 	"github.com/lameaux/bro/internal/client/checker"
 	"github.com/lameaux/bro/internal/client/config"
+	"github.com/lameaux/bro/internal/client/stats"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -82,7 +84,10 @@ func UpdateScenario(
 	}
 }
 
-func ValidateScenario(scenario *config.Scenario) (bool, error) {
+func ValidateScenario(
+	scenario *config.Scenario,
+	counters *stats.RequestCounters,
+) (bool, error) {
 	success := true
 
 	for _, threshold := range scenario.Thresholds {
@@ -98,14 +103,24 @@ func ValidateScenario(scenario *config.Scenario) (bool, error) {
 		}
 
 		if threshold.Metric == metricLatency {
-			success = false
+			passed, err := validateLatencyCheck(scenario, threshold, counters)
+			if err != nil {
+				return false, fmt.Errorf("failed to validate latency check: %w", err)
+			}
+
+			if !passed {
+				success = false
+			}
 		}
 	}
 
 	return success, nil
 }
 
-func validateMetricCheck(scenario *config.Scenario, threshold config.Threshold) (bool, error) {
+func validateMetricCheck(
+	scenario *config.Scenario,
+	threshold *config.Threshold,
+) (bool, error) {
 	checkCounters, ok := scenarioCounters[scenario.Name]
 	if !ok {
 		return false, errMissingCheckCounters
@@ -123,6 +138,56 @@ func validateMetricCheck(scenario *config.Scenario, threshold config.Threshold) 
 		passed = false
 	}
 
+	count := checkCounters.Passed(threshold.Type)
+
+	if threshold.MinCount != nil && *threshold.MinCount > count {
+		passed = false
+	}
+
+	if threshold.MaxCount != nil && *threshold.MaxCount < count {
+		passed = false
+	}
+
+	logThresholdValidation(scenario, threshold, passed, rate, count, 0)
+
+	return passed, nil
+}
+
+func validateLatencyCheck(
+	scenario *config.Scenario,
+	threshold *config.Threshold,
+	counters *stats.RequestCounters,
+) (bool, error) {
+	percentile, err := strconv.ParseFloat(threshold.Type, 64)
+	if err != nil {
+		return false, fmt.Errorf("invalid percentile: %w", err)
+	}
+
+	passed := true
+
+	value := float64(counters.LatencyAtPercentile(percentile))
+
+	if threshold.MinValue != nil && *threshold.MinValue > value {
+		passed = false
+	}
+
+	if threshold.MaxValue != nil && *threshold.MaxValue < value {
+		passed = false
+	}
+
+	logThresholdValidation(scenario, threshold, passed, 0, 0, value)
+
+	return passed, nil
+}
+
+func logThresholdValidation(
+	scenario *config.Scenario,
+	threshold *config.Threshold,
+	passed bool,
+	rate float64,
+	count int64,
+	value float64,
+) {
 	var logEvent *zerolog.Event
 	if passed {
 		logEvent = log.Debug() //nolint:zerologlint
@@ -135,8 +200,8 @@ func validateMetricCheck(scenario *config.Scenario, threshold config.Threshold) 
 		Str("metric", threshold.Metric).
 		Str("type", threshold.Type).
 		Float64("rate", rate).
+		Int64("count", count).
+		Float64("value", value).
 		Bool("passed", passed).
 		Msg("threshold validation")
-
-	return passed, nil
 }

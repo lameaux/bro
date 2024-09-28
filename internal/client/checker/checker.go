@@ -27,7 +27,7 @@ type CheckResult struct {
 	Error  error
 }
 
-func Run(checks []config.Check, response *http.Response) ([]CheckResult, bool) {
+func Run(checks []*config.Check, response *http.Response) ([]CheckResult, bool) {
 	results := make([]CheckResult, len(checks))
 
 	success := true
@@ -44,7 +44,7 @@ func Run(checks []config.Check, response *http.Response) ([]CheckResult, bool) {
 	return results, success
 }
 
-func runCheck(check config.Check, response *http.Response) CheckResult {
+func runCheck(check *config.Check, response *http.Response) CheckResult {
 	if check.Type == typeHTTPCode {
 		return checkHTTPCode(check, response)
 	}
@@ -62,7 +62,7 @@ func runCheck(check config.Check, response *http.Response) CheckResult {
 	}
 }
 
-func checkHTTPCode(check config.Check, response *http.Response) CheckResult {
+func checkHTTPCode(check *config.Check, response *http.Response) CheckResult {
 	var result CheckResult
 
 	result.Actual = strconv.Itoa(response.StatusCode)
@@ -76,7 +76,7 @@ func checkHTTPCode(check config.Check, response *http.Response) CheckResult {
 	return result
 }
 
-func checkHTTPHeader(check config.Check, response *http.Response) CheckResult {
+func checkHTTPHeader(check *config.Check, response *http.Response) CheckResult {
 	var result CheckResult
 
 	result.Actual = response.Header.Get(check.Name)
@@ -96,7 +96,7 @@ func checkHTTPHeader(check config.Check, response *http.Response) CheckResult {
 	return result
 }
 
-func checkHTTPBody(check config.Check, response *http.Response) CheckResult {
+func checkHTTPBody(check *config.Check, response *http.Response) CheckResult {
 	var result CheckResult
 
 	body, err := io.ReadAll(response.Body)

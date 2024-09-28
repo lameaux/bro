@@ -99,9 +99,9 @@ func (a *App) runScenarios(ctx context.Context) *stats.Stats {
 		}
 
 		results.SetRequestCounters(scenario.Name, counters)
-		results.SetDuration(scenario.Name, time.Since(startTime))
+		results.SetDuration(scenario.Name, time.Since(startTime).Round(time.Millisecond))
 
-		passed, err := thresholds.ValidateScenario(scenario)
+		passed, err := thresholds.ValidateScenario(scenario, counters)
 		if err != nil {
 			log.Warn().
 				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).

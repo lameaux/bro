@@ -16,5 +16,5 @@ scenarios:
         type: httpCode
         minRate: 0.99
       - metric: latency
-        type: p99
-        maxValue: 100
+        type: 99
+        maxValue: 50

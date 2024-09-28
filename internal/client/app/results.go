@@ -53,7 +53,9 @@ func resultsTable(conf *config.Config, results *stats.Stats, success bool) strin
 	tableWriter.SetStyle(table.StyleLight)
 	tableWriter.Render()
 
-	output.WriteString(fmt.Sprintf("Total duration: %v\n", results.TotalDuration()))
+	output.WriteString(
+		fmt.Sprintf("Total duration: %s\n", results.TotalDuration()),
+	)
 
 	if success {
 		output.WriteString("OK")

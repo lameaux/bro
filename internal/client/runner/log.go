@@ -47,7 +47,7 @@ func (r *Runner) logCheckResults(
 	ctx context.Context,
 	response *http.Response,
 	latency time.Duration,
-	checks []config.Check,
+	checks []*config.Check,
 	results []checker.CheckResult,
 	success bool,
 ) {

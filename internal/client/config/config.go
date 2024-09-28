@@ -35,10 +35,10 @@ type Scenario struct {
 	ThreadsRaw   int           `yaml:"threads"`
 	QueueSizeRaw int           `yaml:"queueSize"`
 
-	PayloadType string      `yaml:"payloadType"`
-	HTTPRequest HTTPRequest `yaml:"httpRequest"`
-	Checks      []Check     `yaml:"checks"`
-	Thresholds  []Threshold `yaml:"thresholds"`
+	PayloadType string       `yaml:"payloadType"`
+	HTTPRequest HTTPRequest  `yaml:"httpRequest"`
+	Checks      []*Check     `yaml:"checks"`
+	Thresholds  []*Threshold `yaml:"thresholds"`
 }
 
 func (s *Scenario) Rps() int {
@@ -91,11 +91,11 @@ type Threshold struct {
 	Metric string `yaml:"metric"`
 	Type   string `yaml:"type"`
 
-	MinCount *int `yaml:"minCount"`
-	MaxCount *int `yaml:"maxCount"`
+	MinCount *int64 `yaml:"minCount"`
+	MaxCount *int64 `yaml:"maxCount"`
 
-	MinValue *int `yaml:"minValue"`
-	MaxValue *int `yaml:"maxValue"`
+	MinValue *float64 `yaml:"minValue"`
+	MaxValue *float64 `yaml:"maxValue"`
 
 	MinRate *float64 `yaml:"minRate"`
 	MaxRate *float64 `yaml:"maxRate"`

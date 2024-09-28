@@ -28,7 +28,7 @@ func (s *Stats) StopTimer() {
 }
 
 func (s *Stats) TotalDuration() time.Duration {
-	return s.endTime.Sub(s.startTime)
+	return s.endTime.Sub(s.startTime).Round(time.Millisecond)
 }
 
 func (s *Stats) SetRequestCounters(scenarioName string, counters *RequestCounters) {
