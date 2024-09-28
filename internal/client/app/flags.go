@@ -44,7 +44,9 @@ func ParseFlags() *Flags {
 		Args: flag.Args(),
 	}
 
-	log.Debug().Any("flags", flags).Msg("flags parsed")
+	if flags.Debug {
+		log.Debug().Any("flags", flags).Msg("flags parsed")
+	}
 
 	return flags
 }
