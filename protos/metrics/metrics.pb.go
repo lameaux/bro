@@ -219,6 +219,7 @@ var (
 		(*Result)(nil),   // 1: metrics.Result
 	}
 )
+
 var file_protos_metrics_metrics_proto_depIdxs = []int32{
 	0, // 0: metrics.Metrics.sendCounters:input_type -> metrics.Counters
 	1, // 1: metrics.Metrics.sendCounters:output_type -> metrics.Result

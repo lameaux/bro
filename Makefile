@@ -20,10 +20,12 @@ build:
 
 .PHONY: fmt
 fmt:
+	gci write $(GO_FILES) --skip-generated -s standard -s default
 	gofumpt -l -w $(GO_FILES)
 
 .PHONY: fmt-install
 fmt-install:
+	go install github.com/daixiang0/gci@latest
 	go install mvdan.cc/gofumpt@latest
 
 .PHONY: lint
