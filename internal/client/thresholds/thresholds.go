@@ -86,7 +86,7 @@ func UpdateScenario(
 
 func ValidateScenario(
 	scenario *config.Scenario,
-	counters *stats.RequestCounters,
+	counters *stats.Counters,
 ) (bool, error) {
 	success := true
 
@@ -156,7 +156,7 @@ func validateMetricCheck(
 func validateLatencyCheck(
 	scenario *config.Scenario,
 	threshold *config.Threshold,
-	counters *stats.RequestCounters,
+	counters *stats.Counters,
 ) (bool, error) {
 	percentile, err := strconv.ParseFloat(threshold.Type, 64)
 	if err != nil {

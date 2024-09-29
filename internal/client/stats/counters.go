@@ -19,39 +19,37 @@ const (
 	CounterInvalid = "invalid"
 )
 
-type RequestCounters struct {
-	counters sync.Map
+type Counters struct {
+	m sync.Map
 
 	latencyMillis *hdrhistogram.Histogram
 	mu            sync.Mutex
 }
 
-func NewRequestCounters() *RequestCounters {
-	rc := &RequestCounters{
+func NewCounters() *Counters {
+	return &Counters{
 		latencyMillis: hdrhistogram.New(1, 1e6, 3), //nolint:mnd,gomnd
 	}
-
-	return rc
 }
 
-func (r *RequestCounters) recordLatency(latency time.Duration) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (c *Counters) recordLatency(latency time.Duration) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	if err := r.latencyMillis.RecordValue(latency.Milliseconds()); err != nil {
+	if err := c.latencyMillis.RecordValue(latency.Milliseconds()); err != nil {
 		log.Warn().Err(err).Msg("failed to record latency")
 	}
 }
 
-func (r *RequestCounters) LatencyAtPercentile(percentile float64) int64 {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (c *Counters) LatencyAtPercentile(percentile float64) int64 {
+	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	return r.latencyMillis.ValueAtPercentile(percentile)
+	return c.latencyMillis.ValueAtPercentile(percentile)
 }
 
-func (r *RequestCounters) Counter(key string) int64 {
-	val, ok := r.counters.Load(key)
+func (c *Counters) Counter(key string) int64 {
+	val, ok := c.m.Load(key)
 	if !ok {
 		return 0
 	}
@@ -59,30 +57,30 @@ func (r *RequestCounters) Counter(key string) int64 {
 	return atomic.LoadInt64(val.(*int64)) //nolint:forcetypeassert
 }
 
-func (r *RequestCounters) incCounter(key string) {
-	val, _ := r.counters.LoadOrStore(key, new(int64))
+func (c *Counters) incCounter(key string) {
+	val, _ := c.m.LoadOrStore(key, new(int64))
 	atomic.AddInt64(val.(*int64), 1) //nolint:forcetypeassert
 }
 
-func (r *RequestCounters) TrackError(_ map[string]string, err error) {
-	r.incCounter(CounterTotal)
-	r.incCounter(CounterFailed)
+func (c *Counters) TrackError(_ map[string]string, err error) {
+	c.incCounter(CounterTotal)
+	c.incCounter(CounterFailed)
 
 	var netErr net.Error
 	if errors.As(err, &netErr) && netErr.Timeout() {
-		r.incCounter(CounterTimeout)
+		c.incCounter(CounterTimeout)
 	}
 }
 
-func (r *RequestCounters) TrackResponse(_ map[string]string, success bool, latency time.Duration) {
-	r.incCounter(CounterTotal)
+func (c *Counters) TrackResponse(_ map[string]string, success bool, latency time.Duration) {
+	c.incCounter(CounterTotal)
 
 	if success {
-		r.incCounter(CounterSuccess)
+		c.incCounter(CounterSuccess)
 	} else {
-		r.incCounter(CounterInvalid)
-		r.incCounter(CounterFailed)
+		c.incCounter(CounterInvalid)
+		c.incCounter(CounterFailed)
 	}
 
-	r.recordLatency(latency)
+	c.recordLatency(latency)
 }

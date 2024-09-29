@@ -24,7 +24,7 @@ type App struct {
 
 	conf        *config.Config
 	flags       *Flags
-	statsWorker *stats.Worker
+	statsSender *stats.Sender
 }
 
 func New(appName, appVersion, appBuild string) (*App, error) {
@@ -43,18 +43,22 @@ func New(appName, appVersion, appBuild string) (*App, error) {
 	}
 
 	if application.flags.BrodAddr != "" {
-		w, err := stats.NewWorker(application.flags.BrodAddr, application.flags.Group)
+		w, err := stats.NewSender(application.flags.BrodAddr, application.flags.Group)
 		if err != nil {
-			return nil, fmt.Errorf("failed to start stats worker: %w", err)
+			return nil, fmt.Errorf("failed to create stats worker: %w", err)
 		}
 
-		application.statsWorker = w
+		application.statsSender = w
 	}
 
 	return application, nil
 }
 
 func (a *App) Run(ctx context.Context) int {
+	if a.statsSender != nil {
+		go a.statsSender.Run(ctx)
+	}
+
 	results := a.runScenarios(ctx)
 
 	success := a.processResults(results)
@@ -77,12 +81,12 @@ func (a *App) runScenarios(ctx context.Context) *stats.Stats {
 		Msg("executing scenarios... press Ctrl+C (SIGINT) or send SIGTERM to terminate.")
 
 	for _, scenario := range a.conf.Scenarios {
-		counters := stats.NewRequestCounters()
+		localCounters := stats.NewCounters()
 
-		listeners := []runner.StatListener{counters}
+		listeners := []runner.StatListener{localCounters}
 
-		if a.statsWorker != nil {
-			listeners = append(listeners, a.statsWorker.Counters())
+		if a.statsSender != nil {
+			listeners = append(listeners, a.statsSender)
 		}
 
 		r := runner.New(httpClient, scenario, listeners)
@@ -98,10 +102,10 @@ func (a *App) runScenarios(ctx context.Context) *stats.Stats {
 			continue
 		}
 
-		results.SetRequestCounters(scenario.Name, counters)
+		results.SetCounters(scenario.Name, localCounters)
 		results.SetDuration(scenario.Name, time.Since(startTime).Round(time.Millisecond))
 
-		passed, err := thresholds.ValidateScenario(scenario, counters)
+		passed, err := thresholds.ValidateScenario(scenario, localCounters)
 		if err != nil {
 			log.Warn().
 				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).

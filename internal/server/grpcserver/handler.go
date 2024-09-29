@@ -1,30 +1,41 @@
 package grpcserver
 
 import (
-	"context"
+	"errors"
+	"fmt"
+	"io"
 
 	"github.com/lameaux/bro/internal/server/restserver"
 	pb "github.com/lameaux/bro/protos/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
+	"google.golang.org/grpc"
 )
 
-func (s *server) SendCounters(_ context.Context, counters *pb.Counters) (*pb.Result, error) {
-	log.Debug().
-		Str("instance", counters.GetId()).
-		Msg("counter received")
+var emptyResponse = &pb.Empty{} //nolint:gochecknoglobals
 
-	countFailedRequest("check")
+func (s *server) Send(stream grpc.ClientStreamingServer[pb.Metric, pb.Empty]) error {
+	for {
+		metric, err := stream.Recv()
+		if errors.Is(err, io.EOF) {
+			return nil // client finished
+		}
 
-	//nolint:godox
-	// FIXME: I know about it
-	// labels := r.responseLabels(response, success)
-	// metrics.HttpResponsesTotal.With(labels).Inc()
-	//
-	// labels = r.responseLabels(response, success)
-	// metrics.HttpRequestDurationSec.With(labels).Observe(latency.Seconds())
+		if err != nil {
+			return fmt.Errorf("failed to receive from client: %w", err)
+		}
 
-	return &pb.Result{Msg: "received id=" + counters.GetId()}, nil
+		log.Debug().
+			Any("metric", metric).
+			Msg("metric received")
+
+		countFailedRequest("check")
+
+		// Send response to client
+		if err = stream.SendAndClose(emptyResponse); err != nil {
+			return fmt.Errorf("failed to send to client: %w", err)
+		}
+	}
 }
 
 func requestLabels(scenarioName, method, url string) prometheus.Labels {
@@ -34,14 +45,6 @@ func requestLabels(scenarioName, method, url string) prometheus.Labels {
 		"url":      url,
 	}
 }
-
-// func responseLabels(response *http.Response, success bool) prometheus.Labels {
-//	labels := requestLabels("scenario", "GET", "http://example.com")
-//	labels["code"] = strconv.Itoa(response.StatusCode)
-//	labels["success"] = strconv.FormatBool(success)
-//
-//	return labels
-//}
 
 func countFailedRequest(reason string) {
 	labels := requestLabels("scenario", "GET", "http://example.com")

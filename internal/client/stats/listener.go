@@ -1,4 +1,0 @@
-package stats
-
-func Listen() {
-}

@@ -27,7 +27,7 @@ func resultsTable(conf *config.Config, results *stats.Stats, success bool) strin
 	})
 
 	for _, scenario := range conf.Scenarios {
-		counters := results.RequestCounters(scenario.Name)
+		counters := results.Counters(scenario.Name)
 		if counters == nil {
 			log.Warn().
 				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).

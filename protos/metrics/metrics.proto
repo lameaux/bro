@@ -3,36 +3,18 @@ package metrics;
 option go_package = "github.com/lameaux/bro/protos/metrics";
 
 service Metrics {
-  rpc sendCounters(Counters) returns (Result) {}
+  rpc send(stream Metric) returns (Empty) {}
 }
 
-message Counters {
+message Metric {
   string id = 1;
-  int64 total = 2;
-  int64 sent = 3;
-  int64 success = 4;
-  int64 failed = 5;
-  int64 timeout = 6;
-  int64 invalid = 7;
-  int64 latency = 8;
+  string group = 2;
+
+  map<string, string> labels = 3;
+  bool success = 4;
+  bool error = 5;
+  bool timeout = 6;
+  int64 latency = 7;
 }
 
-message HttpRequestsTotal {
-
-}
-
-message HttpRequestsFailedTotal {
-
-}
-
-message HttpResponsesTotal {
-
-}
-
-message HttpRequestDurationSec {
-
-}
-
-message Result {
-  string msg = 1;
-}
+message Empty {}

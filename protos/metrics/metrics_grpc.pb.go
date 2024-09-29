@@ -8,7 +8,6 @@ package metrics
 
 import (
 	context "context"
-
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -20,14 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Metrics_SendCounters_FullMethodName = "/metrics.Metrics/sendCounters"
+	Metrics_Send_FullMethodName = "/metrics.Metrics/send"
 )
 
 // MetricsClient is the client API for Metrics service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type MetricsClient interface {
-	SendCounters(ctx context.Context, in *Counters, opts ...grpc.CallOption) (*Result, error)
+	Send(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[Metric, Empty], error)
 }
 
 type metricsClient struct {
@@ -38,21 +37,24 @@ func NewMetricsClient(cc grpc.ClientConnInterface) MetricsClient {
 	return &metricsClient{cc}
 }
 
-func (c *metricsClient) SendCounters(ctx context.Context, in *Counters, opts ...grpc.CallOption) (*Result, error) {
+func (c *metricsClient) Send(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[Metric, Empty], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(Result)
-	err := c.cc.Invoke(ctx, Metrics_SendCounters_FullMethodName, in, out, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &Metrics_ServiceDesc.Streams[0], Metrics_Send_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &grpc.GenericClientStream[Metric, Empty]{ClientStream: stream}
+	return x, nil
 }
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Metrics_SendClient = grpc.ClientStreamingClient[Metric, Empty]
 
 // MetricsServer is the server API for Metrics service.
 // All implementations must embed UnimplementedMetricsServer
 // for forward compatibility.
 type MetricsServer interface {
-	SendCounters(context.Context, *Counters) (*Result, error)
+	Send(grpc.ClientStreamingServer[Metric, Empty]) error
 	mustEmbedUnimplementedMetricsServer()
 }
 
@@ -63,8 +65,8 @@ type MetricsServer interface {
 // pointer dereference when methods are called.
 type UnimplementedMetricsServer struct{}
 
-func (UnimplementedMetricsServer) SendCounters(context.Context, *Counters) (*Result, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SendCounters not implemented")
+func (UnimplementedMetricsServer) Send(grpc.ClientStreamingServer[Metric, Empty]) error {
+	return status.Errorf(codes.Unimplemented, "method Send not implemented")
 }
 func (UnimplementedMetricsServer) mustEmbedUnimplementedMetricsServer() {}
 func (UnimplementedMetricsServer) testEmbeddedByValue()                 {}
@@ -87,23 +89,12 @@ func RegisterMetricsServer(s grpc.ServiceRegistrar, srv MetricsServer) {
 	s.RegisterService(&Metrics_ServiceDesc, srv)
 }
 
-func _Metrics_SendCounters_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Counters)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(MetricsServer).SendCounters(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Metrics_SendCounters_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(MetricsServer).SendCounters(ctx, req.(*Counters))
-	}
-	return interceptor(ctx, in, info, handler)
+func _Metrics_Send_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(MetricsServer).Send(&grpc.GenericServerStream[Metric, Empty]{ServerStream: stream})
 }
+
+// This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
+type Metrics_SendServer = grpc.ClientStreamingServer[Metric, Empty]
 
 // Metrics_ServiceDesc is the grpc.ServiceDesc for Metrics service.
 // It's only intended for direct use with grpc.RegisterService,
@@ -111,12 +102,13 @@ func _Metrics_SendCounters_Handler(srv interface{}, ctx context.Context, dec fun
 var Metrics_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "metrics.Metrics",
 	HandlerType: (*MetricsServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "sendCounters",
-			Handler:    _Metrics_SendCounters_Handler,
+			StreamName:    "send",
+			Handler:       _Metrics_Send_Handler,
+			ClientStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "protos/metrics/metrics.proto",
 }
