@@ -22,6 +22,7 @@ func (s *server) Send(stream grpc.ClientStreamingServer[pb.Metric, pb.Empty]) er
 			if err = stream.SendAndClose(emptyResponse); err != nil {
 				return fmt.Errorf("failed to send to client: %w", err)
 			}
+
 			return nil
 		}
 
