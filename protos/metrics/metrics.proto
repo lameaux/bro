@@ -2,19 +2,24 @@ syntax = "proto3";
 package metrics;
 option go_package = "github.com/lameaux/bro/protos/metrics";
 
-service Metrics {
-  rpc send(stream Metric) returns (Empty) {}
+service MetricsV1 {
+  rpc send(stream MetricV1) returns (Empty) {}
 }
 
-message Metric {
-  string id = 1;
+message MetricV1 {
+  string instance = 1;
   string group = 2;
 
-  map<string, string> labels = 3;
-  bool success = 4;
-  bool error = 5;
-  bool timeout = 6;
-  int64 latency = 7;
+  string scenario = 3;
+  string method = 4;
+  string url = 5;
+  string code = 6;
+
+  bool failed = 7;
+  bool timeout = 8;
+  bool success = 9;
+
+  double latencySeconds = 10;
 }
 
 message Empty {}

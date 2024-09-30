@@ -19,94 +19,94 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Metrics_Send_FullMethodName = "/metrics.Metrics/send"
+	MetricsV1_Send_FullMethodName = "/metrics.MetricsV1/send"
 )
 
-// MetricsClient is the client API for Metrics service.
+// MetricsV1Client is the client API for MetricsV1 service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type MetricsClient interface {
-	Send(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[Metric, Empty], error)
+type MetricsV1Client interface {
+	Send(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[MetricV1, Empty], error)
 }
 
-type metricsClient struct {
+type metricsV1Client struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewMetricsClient(cc grpc.ClientConnInterface) MetricsClient {
-	return &metricsClient{cc}
+func NewMetricsV1Client(cc grpc.ClientConnInterface) MetricsV1Client {
+	return &metricsV1Client{cc}
 }
 
-func (c *metricsClient) Send(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[Metric, Empty], error) {
+func (c *metricsV1Client) Send(ctx context.Context, opts ...grpc.CallOption) (grpc.ClientStreamingClient[MetricV1, Empty], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	stream, err := c.cc.NewStream(ctx, &Metrics_ServiceDesc.Streams[0], Metrics_Send_FullMethodName, cOpts...)
+	stream, err := c.cc.NewStream(ctx, &MetricsV1_ServiceDesc.Streams[0], MetricsV1_Send_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[Metric, Empty]{ClientStream: stream}
+	x := &grpc.GenericClientStream[MetricV1, Empty]{ClientStream: stream}
 	return x, nil
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Metrics_SendClient = grpc.ClientStreamingClient[Metric, Empty]
+type MetricsV1_SendClient = grpc.ClientStreamingClient[MetricV1, Empty]
 
-// MetricsServer is the server API for Metrics service.
-// All implementations must embed UnimplementedMetricsServer
+// MetricsV1Server is the server API for MetricsV1 service.
+// All implementations must embed UnimplementedMetricsV1Server
 // for forward compatibility.
-type MetricsServer interface {
-	Send(grpc.ClientStreamingServer[Metric, Empty]) error
-	mustEmbedUnimplementedMetricsServer()
+type MetricsV1Server interface {
+	Send(grpc.ClientStreamingServer[MetricV1, Empty]) error
+	mustEmbedUnimplementedMetricsV1Server()
 }
 
-// UnimplementedMetricsServer must be embedded to have
+// UnimplementedMetricsV1Server must be embedded to have
 // forward compatible implementations.
 //
 // NOTE: this should be embedded by value instead of pointer to avoid a nil
 // pointer dereference when methods are called.
-type UnimplementedMetricsServer struct{}
+type UnimplementedMetricsV1Server struct{}
 
-func (UnimplementedMetricsServer) Send(grpc.ClientStreamingServer[Metric, Empty]) error {
+func (UnimplementedMetricsV1Server) Send(grpc.ClientStreamingServer[MetricV1, Empty]) error {
 	return status.Errorf(codes.Unimplemented, "method Send not implemented")
 }
-func (UnimplementedMetricsServer) mustEmbedUnimplementedMetricsServer() {}
-func (UnimplementedMetricsServer) testEmbeddedByValue()                 {}
+func (UnimplementedMetricsV1Server) mustEmbedUnimplementedMetricsV1Server() {}
+func (UnimplementedMetricsV1Server) testEmbeddedByValue()                   {}
 
-// UnsafeMetricsServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to MetricsServer will
+// UnsafeMetricsV1Server may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to MetricsV1Server will
 // result in compilation errors.
-type UnsafeMetricsServer interface {
-	mustEmbedUnimplementedMetricsServer()
+type UnsafeMetricsV1Server interface {
+	mustEmbedUnimplementedMetricsV1Server()
 }
 
-func RegisterMetricsServer(s grpc.ServiceRegistrar, srv MetricsServer) {
-	// If the following call pancis, it indicates UnimplementedMetricsServer was
+func RegisterMetricsV1Server(s grpc.ServiceRegistrar, srv MetricsV1Server) {
+	// If the following call pancis, it indicates UnimplementedMetricsV1Server was
 	// embedded by pointer and is nil.  This will cause panics if an
 	// unimplemented method is ever invoked, so we test this at initialization
 	// time to prevent it from happening at runtime later due to I/O.
 	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
 		t.testEmbeddedByValue()
 	}
-	s.RegisterService(&Metrics_ServiceDesc, srv)
+	s.RegisterService(&MetricsV1_ServiceDesc, srv)
 }
 
-func _Metrics_Send_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(MetricsServer).Send(&grpc.GenericServerStream[Metric, Empty]{ServerStream: stream})
+func _MetricsV1_Send_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(MetricsV1Server).Send(&grpc.GenericServerStream[MetricV1, Empty]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Metrics_SendServer = grpc.ClientStreamingServer[Metric, Empty]
+type MetricsV1_SendServer = grpc.ClientStreamingServer[MetricV1, Empty]
 
-// Metrics_ServiceDesc is the grpc.ServiceDesc for Metrics service.
+// MetricsV1_ServiceDesc is the grpc.ServiceDesc for MetricsV1 service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var Metrics_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "metrics.Metrics",
-	HandlerType: (*MetricsServer)(nil),
+var MetricsV1_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "metrics.MetricsV1",
+	HandlerType: (*MetricsV1Server)(nil),
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "send",
-			Handler:       _Metrics_Send_Handler,
+			Handler:       _MetricsV1_Send_Handler,
 			ClientStreams: true,
 		},
 	},

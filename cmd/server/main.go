@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/lameaux/bro/internal/server/grpcserver"
+	"github.com/lameaux/bro/internal/server/prom"
 	"github.com/lameaux/bro/internal/server/restserver"
 	"github.com/lameaux/bro/internal/shared/banner"
 	"github.com/lameaux/bro/internal/shared/signals"
@@ -20,6 +21,8 @@ const (
 
 	defaultPortGrpc = 8080
 	defaultPortRest = 9090
+
+	defaultMetricsPrefix = "bro_"
 )
 
 var GitHash string //nolint:gochecknoglobals
@@ -30,6 +33,7 @@ func main() {
 	skipBanner := flag.Bool("skipBanner", false, "skip banner")
 	grpcPort := flag.Int("grpcPort", defaultPortGrpc, "port for grpc server")
 	restPort := flag.Int("restPort", defaultPortRest, "port for rest server")
+	metricsPrefix := flag.String("metricsPrefix", defaultMetricsPrefix, "prefix for metrics")
 
 	flag.Parse()
 
@@ -49,7 +53,9 @@ func main() {
 
 	log.Info().Str("version", appVersion).Str("build", GitHash).Msg(appName)
 
-	grpcServer, err := grpcserver.StartGrpcServer(*grpcPort)
+	promMetrics := prom.NewMetrics(*metricsPrefix)
+
+	grpcServer, err := grpcserver.StartGrpcServer(*grpcPort, promMetrics)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to start grpc server")
 

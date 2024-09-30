@@ -4,30 +4,32 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/lameaux/bro/internal/client/tracking"
 )
 
 func (r *Runner) trackError(err error) {
 	for _, l := range r.listeners {
-		l.TrackError(r.labels(nil), err)
+		l.TrackFailed(r.requestInfo(nil), err)
 	}
 }
 
 func (r *Runner) trackResponse(resp *http.Response, success bool, latency time.Duration) {
 	for _, l := range r.listeners {
-		l.TrackResponse(r.labels(resp), success, latency)
+		l.TrackResponse(r.requestInfo(resp), success, latency)
 	}
 }
 
-func (r *Runner) labels(resp *http.Response) map[string]string {
-	labelsMap := map[string]string{
-		"scenario": r.scenario.Name,
-		"method":   r.scenario.HTTPRequest.Method(),
-		"url":      r.scenario.HTTPRequest.URL,
+func (r *Runner) requestInfo(resp *http.Response) *tracking.RequestInfo {
+	info := &tracking.RequestInfo{
+		Scenario: r.scenario.Name,
+		Method:   r.scenario.HTTPRequest.Method(),
+		URL:      r.scenario.HTTPRequest.URL,
 	}
 
 	if resp != nil {
-		labelsMap["code"] = strconv.Itoa(resp.StatusCode)
+		info.Code = strconv.Itoa(resp.StatusCode)
 	}
 
-	return labelsMap
+	return info
 }

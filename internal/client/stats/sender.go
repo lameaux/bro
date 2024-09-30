@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/lameaux/bro/internal/client/grpcclient"
+	"github.com/lameaux/bro/internal/client/tracking"
 	pb "github.com/lameaux/bro/protos/metrics"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
@@ -18,31 +19,36 @@ import (
 type Sender struct {
 	conn *grpc.ClientConn
 
-	instanceID string
-	groupID    string
+	instance string
+	group    string
 
 	queue []TrackInfo
 	mu    sync.Mutex
 }
 
 type TrackInfo struct {
-	Labels  map[string]string
-	Error   bool
+	Scenario string
+	Method   string
+	URL      string
+	Code     string
+
+	Failed  bool
 	Timeout bool
 	Success bool
+
 	Latency time.Duration
 }
 
-func NewSender(serverAddr, groupID string) (*Sender, error) {
+func NewSender(serverAddr, group string) (*Sender, error) {
 	conn, err := grpcclient.GrpcConnection(serverAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to %v: %w", serverAddr, err)
 	}
 
 	worker := &Sender{
-		conn:       conn,
-		instanceID: uuid.NewString(),
-		groupID:    groupID,
+		conn:     conn,
+		instance: uuid.NewString(),
+		group:    group,
 	}
 
 	return worker, nil
@@ -52,8 +58,9 @@ func (s *Sender) Run(ctx context.Context) {
 	defer s.conn.Close()
 
 	log.Debug().
-		Str("instance", s.instanceID).
-		Msg("started stats worker")
+		Str("instance", s.instance).
+		Str("group", s.group).
+		Msg("started stats sender")
 
 	rateTicker := time.NewTicker(1 * time.Second)
 
@@ -70,7 +77,7 @@ func (s *Sender) Run(ctx context.Context) {
 }
 
 func (s *Sender) sendTracking(ctx context.Context) error {
-	c := pb.NewMetricsClient(s.conn)
+	c := pb.NewMetricsV1Client(s.conn)
 
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, time.Second)
 	defer cancel()
@@ -86,14 +93,20 @@ func (s *Sender) sendTracking(ctx context.Context) error {
 	s.mu.Unlock()
 
 	for _, info := range queueCopy {
-		err = stream.Send(&pb.Metric{
-			Id:      s.instanceID,
-			Group:   s.groupID,
-			Labels:  info.Labels,
-			Success: info.Success,
-			Error:   info.Error,
+		err = stream.Send(&pb.MetricV1{
+			Instance: s.instance,
+			Group:    s.group,
+
+			Scenario: info.Scenario,
+			Method:   info.Method,
+			Url:      info.URL,
+			Code:     info.Code,
+
+			Failed:  info.Failed,
 			Timeout: info.Timeout,
-			Latency: info.Latency.Milliseconds(),
+			Success: info.Success,
+
+			LatencySeconds: info.Latency.Seconds(),
 		})
 		if err != nil {
 			return fmt.Errorf("failed to send metric: %w", err)
@@ -109,16 +122,19 @@ func (s *Sender) sendTracking(ctx context.Context) error {
 	return nil
 }
 
-func (s *Sender) TrackError(labels map[string]string, err error) {
+func (s *Sender) TrackFailed(
+	reqInfo *tracking.RequestInfo,
+	err error,
+) {
 	var netErr net.Error
 	timeout := errors.As(err, &netErr) && netErr.Timeout()
 
 	info := TrackInfo{
-		Labels:  labels,
-		Error:   true,
-		Timeout: timeout,
-		Success: false,
-		Latency: 0,
+		Scenario: reqInfo.Scenario,
+		Method:   reqInfo.Method,
+		URL:      reqInfo.URL,
+		Failed:   true,
+		Timeout:  timeout,
 	}
 
 	s.mu.Lock()
@@ -126,13 +142,18 @@ func (s *Sender) TrackError(labels map[string]string, err error) {
 	s.mu.Unlock()
 }
 
-func (s *Sender) TrackResponse(labels map[string]string, success bool, latency time.Duration) {
+func (s *Sender) TrackResponse(
+	reqInfo *tracking.RequestInfo,
+	success bool,
+	latency time.Duration,
+) {
 	info := TrackInfo{
-		Labels:  labels,
-		Error:   false,
-		Timeout: false,
-		Success: success,
-		Latency: latency,
+		Scenario: reqInfo.Scenario,
+		Method:   reqInfo.Method,
+		URL:      reqInfo.URL,
+		Code:     reqInfo.Code,
+		Success:  success,
+		Latency:  latency,
 	}
 
 	s.mu.Lock()

@@ -1,8 +1,19 @@
 package runner
 
-import "time"
+import (
+	"time"
+
+	"github.com/lameaux/bro/internal/client/tracking"
+)
 
 type StatListener interface {
-	TrackError(labels map[string]string, err error)
-	TrackResponse(labels map[string]string, success bool, latency time.Duration)
+	TrackFailed(
+		info *tracking.RequestInfo,
+		err error,
+	)
+	TrackResponse(
+		info *tracking.RequestInfo,
+		success bool,
+		latency time.Duration,
+	)
 }

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/HdrHistogram/hdrhistogram-go"
+	"github.com/lameaux/bro/internal/client/tracking"
 	"github.com/rs/zerolog/log"
 )
 
@@ -62,7 +63,10 @@ func (c *Counters) incCounter(key string) {
 	atomic.AddInt64(val.(*int64), 1) //nolint:forcetypeassert
 }
 
-func (c *Counters) TrackError(_ map[string]string, err error) {
+func (c *Counters) TrackFailed(
+	_ *tracking.RequestInfo,
+	err error,
+) {
 	c.incCounter(CounterTotal)
 	c.incCounter(CounterFailed)
 
@@ -72,7 +76,11 @@ func (c *Counters) TrackError(_ map[string]string, err error) {
 	}
 }
 
-func (c *Counters) TrackResponse(_ map[string]string, success bool, latency time.Duration) {
+func (c *Counters) TrackResponse(
+	_ *tracking.RequestInfo,
+	success bool,
+	latency time.Duration,
+) {
 	c.incCounter(CounterTotal)
 
 	if success {
