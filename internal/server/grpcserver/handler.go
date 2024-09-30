@@ -17,8 +17,12 @@ var emptyResponse = &pb.Empty{} //nolint:gochecknoglobals
 func (s *server) Send(stream grpc.ClientStreamingServer[pb.Metric, pb.Empty]) error {
 	for {
 		metric, err := stream.Recv()
-		if errors.Is(err, io.EOF) {
-			return nil // client finished
+		if errors.Is(err, io.EOF) { // client finished
+			// Send response to client
+			if err = stream.SendAndClose(emptyResponse); err != nil {
+				return fmt.Errorf("failed to send to client: %w", err)
+			}
+			return nil
 		}
 
 		if err != nil {
@@ -30,11 +34,6 @@ func (s *server) Send(stream grpc.ClientStreamingServer[pb.Metric, pb.Empty]) er
 			Msg("metric received")
 
 		countFailedRequest("check")
-
-		// Send response to client
-		if err = stream.SendAndClose(emptyResponse); err != nil {
-			return fmt.Errorf("failed to send to client: %w", err)
-		}
 	}
 }
 

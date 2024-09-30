@@ -22,7 +22,7 @@ type Sender struct {
 	groupID    string
 
 	queue []TrackInfo
-	mu    sync.RWMutex
+	mu    sync.Mutex
 }
 
 type TrackInfo struct {
@@ -80,10 +80,12 @@ func (s *Sender) sendTracking(ctx context.Context) error {
 		return fmt.Errorf("failed to make grpc call: %w", err)
 	}
 
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	s.mu.Lock()
+	queueCopy := s.queue
+	s.queue = nil
+	s.mu.Unlock()
 
-	for _, info := range s.queue {
+	for _, info := range queueCopy {
 		err = stream.Send(&pb.Metric{
 			Id:      s.instanceID,
 			Group:   s.groupID,
@@ -98,13 +100,11 @@ func (s *Sender) sendTracking(ctx context.Context) error {
 		}
 	}
 
-	s.queue = nil
-
-	if err = stream.CloseSend(); err != nil {
-		return fmt.Errorf("failed to close sending: %w", err)
+	if _, err = stream.CloseAndRecv(); err != nil {
+		return fmt.Errorf("failed to close stream: %w", err)
 	}
 
-	log.Debug().Msg("tracking sent")
+	log.Debug().Int("count", len(queueCopy)).Msg("tracking sent")
 
 	return nil
 }
@@ -122,9 +122,8 @@ func (s *Sender) TrackError(labels map[string]string, err error) {
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	s.queue = append(s.queue, info)
+	s.mu.Unlock()
 }
 
 func (s *Sender) TrackResponse(labels map[string]string, success bool, latency time.Duration) {
@@ -137,7 +136,6 @@ func (s *Sender) TrackResponse(labels map[string]string, success bool, latency t
 	}
 
 	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	s.queue = append(s.queue, info)
+	s.mu.Unlock()
 }
