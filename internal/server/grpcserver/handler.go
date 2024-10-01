@@ -7,7 +7,6 @@ import (
 	"strconv"
 
 	pb "github.com/lameaux/bro/protos/metrics"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/rs/zerolog/log"
 	"google.golang.org/grpc"
 )
@@ -43,8 +42,8 @@ func (s *server) countRequestMetric(metric *pb.MetricV1) {
 	s.promMetrics.CountRequest(labels, metric.GetLatencySeconds())
 }
 
-func requestLabels(metric *pb.MetricV1) prometheus.Labels {
-	return prometheus.Labels{
+func requestLabels(metric *pb.MetricV1) map[string]string {
+	return map[string]string{
 		"instance_id": metric.GetInstance(),
 		"group_id":    metric.GetGroup(),
 		"scenario":    metric.GetScenario(),

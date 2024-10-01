@@ -5,8 +5,7 @@ import (
 )
 
 //nolint:gochecknoglobals
-var labels = []string{
-	"instance_id",
+var labelsTotal = []string{
 	"group_id",
 
 	"scenario",
@@ -16,6 +15,18 @@ var labels = []string{
 
 	"failed",
 	"timeout",
+	"success",
+}
+
+//nolint:gochecknoglobals
+var labelsDuration = []string{
+	"group_id",
+
+	"scenario",
+	"method",
+	"url",
+	"code",
+
 	"success",
 }
 
@@ -31,7 +42,7 @@ func NewMetrics(prefix string) *Metrics {
 				Name: prefix + "http_requests_total",
 				Help: "Total number of HTTP requests",
 			},
-			labels,
+			labelsTotal,
 		),
 		httpRequestDurationSeconds: prometheus.NewHistogramVec(
 			prometheus.HistogramOpts{
@@ -39,7 +50,7 @@ func NewMetrics(prefix string) *Metrics {
 				Help:    "Duration of HTTP requests in seconds",
 				Buckets: prometheus.DefBuckets,
 			},
-			labels,
+			labelsDuration,
 		),
 	}
 
@@ -51,7 +62,17 @@ func NewMetrics(prefix string) *Metrics {
 	return requestMetrics
 }
 
-func (m *Metrics) CountRequest(labels prometheus.Labels, latency float64) {
-	m.httpRequestsTotal.With(labels).Inc()
-	m.httpRequestDurationSeconds.With(labels).Observe(latency)
+func (m *Metrics) CountRequest(labels map[string]string, latency float64) {
+	m.httpRequestsTotal.With(makePromLabels(labels, labelsTotal)).Inc()
+	m.httpRequestDurationSeconds.With(makePromLabels(labels, labelsDuration)).Observe(latency)
+}
+
+func makePromLabels(labels prometheus.Labels, keys []string) prometheus.Labels {
+	result := prometheus.Labels{}
+
+	for _, key := range keys {
+		result[key] = labels[key]
+	}
+
+	return result
 }
