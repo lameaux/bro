@@ -124,7 +124,7 @@ func (a *App) processResults(runStats *stats.Stats) bool {
 	success := runStats.AllThresholdsPassed()
 
 	log.Info().
-		Dur("totalDuration", runStats.TotalDuration()).
+		Str("totalDuration", runStats.TotalDuration().Round(time.Millisecond).String()).
 		Bool("success", success).
 		Msg("result")
 

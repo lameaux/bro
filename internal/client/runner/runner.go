@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/lameaux/bro/internal/client/config"
 	"github.com/lameaux/bro/internal/client/thresholds"
@@ -35,7 +36,7 @@ func (r *Runner) Run(ctx context.Context) error {
 			Int("rps", r.scenario.Rps()).
 			Int("threads", r.scenario.Threads()).
 			Int("queueSize", r.scenario.QueueSize()).
-			Dur("duration", r.scenario.Duration()),
+			Str("duration", r.scenario.Duration().Round(time.Millisecond).String()),
 	).Msg("running scenario")
 
 	thresholds.AddScenario(r.scenario)
