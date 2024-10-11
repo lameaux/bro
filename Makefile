@@ -3,6 +3,7 @@ BUILD_DIR := ./bin
 GIT_HASH := $(shell git rev-parse --short HEAD)
 DOCKER_REPO := ghcr.io
 DOCKER_IMAGE := lameaux/bro
+TEST_FLAGS := -race -coverprofile=coverage.out
 
 GO_FILES := $(shell find $(SRC_DIR) -name '*.go' ! -path '$(SRC_DIR)/protos/*go')
 
@@ -38,7 +39,7 @@ lint-install:
 
 .PHONY: test
 test:
-	go test $(SRC_DIR)/... -coverprofile=coverage.out
+	go test $(SRC_DIR)/... $(TEST_FLAGS)
 
 .PHONY: coverage
 coverage:

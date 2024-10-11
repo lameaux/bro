@@ -48,7 +48,7 @@ func (r *Runner) logCheckResults(
 	response *http.Response,
 	latency time.Duration,
 	checks []*config.Check,
-	results []checker.CheckResult,
+	results []checker.Result,
 	success bool,
 ) {
 	logEvent, err := r.makeLogEvent(ctx, response, latency)

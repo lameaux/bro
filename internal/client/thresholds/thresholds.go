@@ -74,7 +74,7 @@ func AddScenario(scenario *config.Scenario) {
 
 func UpdateScenario(
 	scenario *config.Scenario,
-	results []checker.CheckResult,
+	results []checker.Result,
 ) {
 	checkCounters := scenarioCounters[scenario.Name]
 

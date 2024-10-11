@@ -74,7 +74,8 @@ func (r *Runner) processMessage(ctx context.Context, threadID int, msgID int) {
 
 	latency := time.Since(startTime)
 
-	checkResults, success := checker.Run(r.scenario.Checks, resp)
+	responseChecker := checker.New(r.scenario.Checks)
+	checkResults, success := responseChecker.Validate(resp)
 
 	r.logCheckResults(
 		ctxWithValues,

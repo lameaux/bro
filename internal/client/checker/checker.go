@@ -14,26 +14,36 @@ import (
 const (
 	maxBodyLength = 100
 
-	typeHTTPCode   = "httpCode"
-	typeHTTPHeader = "httpHeader"
-	typeHTTPBody   = "httpBody"
+	TypeHTTPCode   = "httpCode"
+	TypeHTTPHeader = "httpHeader"
+	TypeHTTPBody   = "httpBody"
 )
 
-var errUnknownCheckType = errors.New("unknown check type")
+var ErrUnknownCheckType = errors.New("unknown check type")
 
-type CheckResult struct {
+type Result struct {
 	Actual string
 	Pass   bool
 	Error  error
 }
 
-func Run(checks []*config.Check, response *http.Response) ([]CheckResult, bool) {
-	results := make([]CheckResult, len(checks))
+type Checker struct {
+	checks []*config.Check
+}
+
+func New(checks []*config.Check) *Checker {
+	return &Checker{
+		checks: checks,
+	}
+}
+
+func (c *Checker) Validate(response *http.Response) ([]Result, bool) {
+	results := make([]Result, len(c.checks))
 
 	success := true
 
-	for i, check := range checks {
-		result := runCheck(check, response)
+	for i, check := range c.checks {
+		result := RunCheck(check, response)
 		results[i] = result
 
 		if !result.Pass {
@@ -44,26 +54,26 @@ func Run(checks []*config.Check, response *http.Response) ([]CheckResult, bool) 
 	return results, success
 }
 
-func runCheck(check *config.Check, response *http.Response) CheckResult {
-	if check.Type == typeHTTPCode {
-		return checkHTTPCode(check, response)
+func RunCheck(check *config.Check, response *http.Response) Result {
+	if check.Type == TypeHTTPCode {
+		return CheckHTTPCode(check, response)
 	}
 
-	if check.Type == typeHTTPHeader {
-		return checkHTTPHeader(check, response)
+	if check.Type == TypeHTTPHeader {
+		return CheckHTTPHeader(check, response)
 	}
 
-	if check.Type == typeHTTPBody {
-		return checkHTTPBody(check, response)
+	if check.Type == TypeHTTPBody {
+		return CheckHTTPBody(check, response)
 	}
 
-	return CheckResult{
-		Error: errUnknownCheckType,
+	return Result{
+		Error: ErrUnknownCheckType,
 	}
 }
 
-func checkHTTPCode(check *config.Check, response *http.Response) CheckResult {
-	var result CheckResult
+func CheckHTTPCode(check *config.Check, response *http.Response) Result {
+	var result Result
 
 	result.Actual = strconv.Itoa(response.StatusCode)
 
@@ -76,8 +86,8 @@ func checkHTTPCode(check *config.Check, response *http.Response) CheckResult {
 	return result
 }
 
-func checkHTTPHeader(check *config.Check, response *http.Response) CheckResult {
-	var result CheckResult
+func CheckHTTPHeader(check *config.Check, response *http.Response) Result {
+	var result Result
 
 	result.Actual = response.Header.Get(check.Name)
 
@@ -96,8 +106,8 @@ func checkHTTPHeader(check *config.Check, response *http.Response) CheckResult {
 	return result
 }
 
-func checkHTTPBody(check *config.Check, response *http.Response) CheckResult {
-	var result CheckResult
+func CheckHTTPBody(check *config.Check, response *http.Response) Result {
+	var result Result
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
@@ -107,12 +117,7 @@ func checkHTTPBody(check *config.Check, response *http.Response) CheckResult {
 	}
 
 	bodyString := string(body)
-
-	if len(bodyString) > maxBodyLength {
-		result.Actual = bodyString[0:maxBodyLength] + "..."
-	} else {
-		result.Actual = bodyString
-	}
+	result.Actual = TruncBody(bodyString)
 
 	if check.Equals != "" {
 		result.Pass = bodyString == check.Equals
@@ -127,4 +132,12 @@ func checkHTTPBody(check *config.Check, response *http.Response) CheckResult {
 	}
 
 	return result
+}
+
+func TruncBody(s string) string {
+	if len(s) > maxBodyLength {
+		return s[0:maxBodyLength] + "..."
+	}
+
+	return s
 }
