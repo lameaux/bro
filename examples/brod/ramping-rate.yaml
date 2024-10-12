@@ -1,0 +1,26 @@
+name: Ramping Rate Example
+defaults:
+  threads: 100
+  checks:
+    - type: httpCode
+      equals: 200
+  thresholds:
+    - metric: checks
+      type: httpCode
+      minRate: 0.99
+    - metric: latency
+      type: 99
+      maxValue: 50
+httpClient:
+  timeout: 1s
+scenarios:
+  - name: 100 rps
+    stages:
+      - name: ramp up
+        rps: 100
+        duration: 5s
+      - name: constant
+        rps: 100
+        duration: 30s
+    httpRequest:
+      url: http://0.0.0.0:9090/

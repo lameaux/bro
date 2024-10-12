@@ -89,7 +89,7 @@ Connects `bro` (client) with `brod` (server).
 ### Example
 
 ```shell
-bro --skipBanner --debug examples/00-ping-google.yaml
+bro --skipBanner --debug examples/ping/google.yaml
 
 4:50PM INF bro build=91fef7e version=v0.0.1
 4:50PM INF config loaded config={"name":"Ping Google","path":"examples/00-ping-google.yaml"}
@@ -111,7 +111,7 @@ bro --skipBanner --debug examples/00-ping-google.yaml
 4:50PM DBG threshold validation metric=checks passed=true rate=1 scenario={"name":"Check Error"} type=httpCode
 4:50PM INF result success=true totalDuration=3003.865
 Name: Ping Google
-Path: examples/00-ping-google.yaml
+Path: examples/ping/google.yaml
 ┌────────────────────┬───────┬──────┬─────────┬────────┬─────────┬─────────┬──────────────┬──────────────┬─────┬────────┐
 │ SCENARIO           │ TOTAL │ SENT │ SUCCESS │ FAILED │ TIMEOUT │ INVALID │ LATENCY @P99 │     DURATION │ RPS │ PASSED │
 ├────────────────────┼───────┼──────┼─────────┼────────┼─────────┼─────────┼──────────────┼──────────────┼─────┼────────┤
@@ -204,7 +204,7 @@ broctl --debug
 See [examples](./examples) dir for testing examples:
 
 - [Ping Google](./examples/00-ping-google.yaml)
-- [Constant Rate Example](./examples/01-brod-constant-rate.yaml)
+- [Constant Rate Example](examples/brod/01-brod-constant-rate.yaml)
 
 Check out [nft repo](https://github.com/lameaux/nft) for more examples.
 

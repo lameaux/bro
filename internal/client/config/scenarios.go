@@ -5,11 +5,13 @@ import "time"
 type Scenario struct {
 	Name string `yaml:"name"`
 
+	HTTPRequest HTTPRequest `yaml:"httpRequest"`
+
 	RpsRaw      int           `yaml:"rps"`
 	DurationRaw time.Duration `yaml:"duration"`
 	ThreadsRaw  int           `yaml:"threads"`
 
-	HTTPRequest HTTPRequest `yaml:"httpRequest"`
+	Stages []*Stage `yaml:"stages"`
 
 	Checks     []*Check     `yaml:"checks"`
 	Thresholds []*Threshold `yaml:"thresholds"`
