@@ -47,6 +47,14 @@ func (r *Runner) Run(ctx context.Context) error {
 
 	thresholds.AddScenario(r.scenario)
 
+	if len(r.scenario.Stages) > 0 {
+		return r.runRampingRate(ctx)
+	} else {
+		return r.runConstantRate(ctx)
+	}
+}
+
+func (r *Runner) runConstantRate(ctx context.Context) error {
 	queue := make(chan int, r.scenario.Threads())
 	stop := make(chan struct{})
 
@@ -57,5 +65,10 @@ func (r *Runner) Run(ctx context.Context) error {
 		return fmt.Errorf("failed sending requests: %w", err)
 	}
 
+	return nil
+}
+
+func (r *Runner) runRampingRate(_ context.Context) error {
+	// TODO ramping rate
 	return nil
 }
