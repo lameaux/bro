@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/lameaux/bro/internal/client/config"
@@ -81,43 +82,52 @@ func (a *App) runScenarios(ctx context.Context) *stats.Stats {
 		Msg("executing scenarios... press Ctrl+C (SIGINT) or send SIGTERM to terminate.")
 
 	for _, scenario := range a.conf.Scenarios {
-		localCounters := stats.NewCounters()
-
-		listeners := []runner.StatListener{localCounters}
-
-		if a.statsSender != nil {
-			listeners = append(listeners, a.statsSender)
-		}
-
-		r := runner.New(httpClient, scenario, listeners)
-
-		startTime := time.Now()
-
-		err := r.Run(ctx)
-		if err != nil {
-			log.Error().Err(err).
-				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
-				Msg("failed to run scenario")
-
-			continue
-		}
-
-		results.SetCounters(scenario.Name, localCounters)
-		results.SetDuration(scenario.Name, time.Since(startTime).Round(time.Millisecond))
-
-		passed, err := thresholds.ValidateScenario(scenario, localCounters)
-		if err != nil {
-			log.Warn().
-				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
-				Msg("failed to validate thresholds")
-
-			continue
-		}
-
-		results.SetThresholdsPassed(scenario.Name, passed)
+		a.runScenario(ctx, httpClient, scenario, results)
 	}
 
 	return results
+}
+
+func (a *App) runScenario(
+	ctx context.Context,
+	httpClient *http.Client,
+	scenario *config.Scenario,
+	results *stats.Stats,
+) {
+	localCounters := stats.NewCounters()
+
+	listeners := []runner.StatListener{localCounters}
+
+	if a.statsSender != nil {
+		listeners = append(listeners, a.statsSender)
+	}
+
+	r := runner.New(httpClient, scenario, listeners)
+
+	startTime := time.Now()
+
+	err := r.Run(ctx)
+	if err != nil {
+		log.Error().Err(err).
+			Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
+			Msg("failed to run scenario")
+
+		return
+	}
+
+	results.SetCounters(scenario.Name, localCounters)
+	results.SetDuration(scenario.Name, time.Since(startTime).Round(time.Millisecond))
+
+	passed, err := thresholds.ValidateScenario(scenario, localCounters)
+	if err != nil {
+		log.Warn().
+			Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
+			Msg("failed to validate thresholds")
+
+		return
+	}
+
+	results.SetThresholdsPassed(scenario.Name, passed)
 }
 
 func (a *App) processResults(runStats *stats.Stats) bool {

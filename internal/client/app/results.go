@@ -27,7 +27,6 @@ func resultsTable(conf *config.Config, results *stats.Stats, success bool) strin
 	})
 
 	for _, scenarioName := range conf.ScenarioNames() {
-
 		counters := results.Counters(scenarioName)
 		if counters == nil {
 			log.Warn().
