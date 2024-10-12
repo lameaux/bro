@@ -49,9 +49,9 @@ func (r *Runner) Run(ctx context.Context) error {
 
 	if len(r.scenario.Stages) > 0 {
 		return r.runRampingRate(ctx)
-	} else {
-		return r.runConstantRate(ctx)
 	}
+
+	return r.runConstantRate(ctx)
 }
 
 func (r *Runner) runConstantRate(ctx context.Context) error {
