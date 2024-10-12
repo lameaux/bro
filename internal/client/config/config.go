@@ -2,103 +2,29 @@ package config
 
 import (
 	"fmt"
-	"io"
-	"net/http"
-	"os"
-	"strings"
-	"time"
-
 	"gopkg.in/yaml.v3"
+	"os"
 )
 
 type Config struct {
-	Name       string      `yaml:"name"`
-	Parallel   bool        `yaml:"parallel"`
-	HTTPClient HTTPClient  `yaml:"httpClient"`
-	Scenarios  []*Scenario `yaml:"scenarios"`
+	Name       string     `yaml:"name"`
+	Parallel   bool       `yaml:"parallel"`
+	HTTPClient HTTPClient `yaml:"httpClient"`
+
+	DefaultScenario *Scenario   `yaml:"defaults"`
+	Scenarios       []*Scenario `yaml:"scenarios"`
 
 	FileName string `yaml:"-"`
 }
 
-type HTTPClient struct {
-	MaxIdleConnsPerHost    int           `yaml:"maxIdleConnsPerHost"`
-	DisableKeepAlive       bool          `yaml:"disableKeepAlive"`
-	Timeout                time.Duration `yaml:"timeout"`
-	DisableFollowRedirects bool          `yaml:"disableFollowRedirects"`
-}
+func (c *Config) ScenarioNames() []string {
+	names := make([]string, len(c.Scenarios))
 
-type Scenario struct {
-	Name string `yaml:"name"`
-
-	RpsRaw       int           `yaml:"rps"`
-	DurationRaw  time.Duration `yaml:"duration"`
-	ThreadsRaw   int           `yaml:"threads"`
-	QueueSizeRaw int           `yaml:"queueSize"`
-
-	PayloadType string       `yaml:"payloadType"`
-	HTTPRequest HTTPRequest  `yaml:"httpRequest"`
-	Checks      []*Check     `yaml:"checks"`
-	Thresholds  []*Threshold `yaml:"thresholds"`
-}
-
-func (s *Scenario) Rps() int {
-	return max(s.RpsRaw, 1)
-}
-
-func (s *Scenario) Duration() time.Duration {
-	return max(s.DurationRaw, 1*time.Second)
-}
-
-func (s *Scenario) Threads() int {
-	return max(s.ThreadsRaw, 1)
-}
-
-func (s *Scenario) QueueSize() int {
-	return max(s.QueueSizeRaw, s.Threads())
-}
-
-type HTTPRequest struct {
-	URL       string  `yaml:"url"`
-	MethodRaw *string `yaml:"method"`
-	BodyRaw   *string `yaml:"body"`
-}
-
-func (r *HTTPRequest) Method() string {
-	if r.MethodRaw != nil {
-		return *r.MethodRaw
+	for i, scenario := range c.Scenarios {
+		names[i] = scenario.Name
 	}
 
-	return http.MethodGet
-}
-
-func (r *HTTPRequest) BodyReader() io.Reader {
-	if r.BodyRaw != nil {
-		return strings.NewReader(*r.BodyRaw)
-	}
-
-	return nil
-}
-
-type Check struct {
-	Type     string `yaml:"type"`
-	Name     string `yaml:"name"`
-	Equals   string `yaml:"equals"`
-	Contains string `yaml:"contains"`
-	Matches  string `yaml:"matches"`
-}
-
-type Threshold struct {
-	Metric string `yaml:"metric"`
-	Type   string `yaml:"type"`
-
-	MinCount *int64 `yaml:"minCount"`
-	MaxCount *int64 `yaml:"maxCount"`
-
-	MinValue *float64 `yaml:"minValue"`
-	MaxValue *float64 `yaml:"maxValue"`
-
-	MinRate *float64 `yaml:"minRate"`
-	MaxRate *float64 `yaml:"maxRate"`
+	return names
 }
 
 func Load(fileName string) (*Config, error) {
@@ -117,5 +43,13 @@ func Load(fileName string) (*Config, error) {
 
 	conf.FileName = fileName
 
+	conf.applyDefaults()
+
 	return &conf, nil
+}
+
+func (c *Config) applyDefaults() {
+	for _, scenario := range c.Scenarios {
+		MergeScenarios(scenario, c.DefaultScenario)
+	}
 }

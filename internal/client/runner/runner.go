@@ -35,13 +35,12 @@ func (r *Runner) Run(ctx context.Context) error {
 			Str("name", r.scenario.Name).
 			Int("rps", r.scenario.Rps()).
 			Int("threads", r.scenario.Threads()).
-			Int("queueSize", r.scenario.QueueSize()).
 			Str("duration", r.scenario.Duration().Round(time.Millisecond).String()),
 	).Msg("running scenario")
 
 	thresholds.AddScenario(r.scenario)
 
-	queue := make(chan int, r.scenario.QueueSize())
+	queue := make(chan int, r.scenario.Threads())
 	stop := make(chan struct{})
 
 	cancel := r.startGenerator(ctx, queue, stop)

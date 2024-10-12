@@ -26,27 +26,28 @@ func resultsTable(conf *config.Config, results *stats.Stats, success bool) strin
 		"Scenario", "Total", "Success", "Failed", "Timeout", "Invalid", "Latency @P99", "Duration", "RPS", "Passed",
 	})
 
-	for _, scenario := range conf.Scenarios {
-		counters := results.Counters(scenario.Name)
+	for _, scenarioName := range conf.ScenarioNames() {
+
+		counters := results.Counters(scenarioName)
 		if counters == nil {
 			log.Warn().
-				Dict("scenario", zerolog.Dict().Str("name", scenario.Name)).
+				Dict("scenario", zerolog.Dict().Str("name", scenarioName)).
 				Msg("missing stats")
 
 			continue
 		}
 
 		tableWriter.AppendRow(table.Row{
-			scenario.Name,
+			scenarioName,
 			counters.Counter(stats.CounterTotal),
 			counters.Counter(stats.CounterSuccess),
 			counters.Counter(stats.CounterFailed),
 			counters.Counter(stats.CounterTimeout),
 			counters.Counter(stats.CounterInvalid),
 			fmt.Sprintf("%d ms", counters.LatencyAtPercentile(latencyPercentile)),
-			results.Duration(scenario.Name),
-			results.Rps(scenario.Name),
-			results.ThresholdsPassed(scenario.Name),
+			results.Duration(scenarioName),
+			results.Rps(scenarioName),
+			results.ThresholdsPassed(scenarioName),
 		})
 	}
 

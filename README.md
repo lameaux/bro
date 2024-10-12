@@ -224,7 +224,6 @@ scenarios: # list
     duration: 15s # duration
     threads: 20 # int
     queue: 200 # int
-    payloadType: http # only http for now
     httpRequest:
       url: http://0.0.0.0:8080/random # url
       method: GET # GET, POST, HEAD, DELETE, etc.

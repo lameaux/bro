@@ -1,0 +1,21 @@
+name: Parallel Ping
+parallel: true
+httpClient:
+  timeout: 5s
+  disableFollowRedirects: true
+defaults:
+  duration: 5s
+  checks:
+    - type: httpCode
+      equals: 200
+  thresholds:
+    - metric: checks
+      type: httpCode
+      minRate: 0.99
+scenarios:
+  - name: Ping Google
+    httpRequest:
+      url: https://www.google.com
+  - name: Ping Bing
+    httpRequest:
+      url: https://www.bing.com
