@@ -23,6 +23,7 @@ linters-settings:
     ignore-names:
       - err
       - tt
+      - wg
 
 issues:
   exclude-rules:

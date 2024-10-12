@@ -21,7 +21,11 @@ func (e *SenderError) Error() string {
 	return e.Msg
 }
 
-func (r *Runner) runSender(ctx context.Context, queue <-chan int, stop <-chan struct{}) error {
+func (r *Runner) runSender(
+	ctx context.Context,
+	queue <-chan int,
+	stop <-chan struct{},
+) error {
 	var errGrp errgroup.Group
 
 	for t := 0; t < r.scenario.Threads(); t++ {
@@ -31,14 +35,20 @@ func (r *Runner) runSender(ctx context.Context, queue <-chan int, stop <-chan st
 			for {
 				select {
 				case <-stop:
-					log.Debug().Int("threadID", threadID).Msg("shutting down")
+					log.Debug().
+						Int("scenarioID", r.scenarioID).
+						Int("threadID", threadID).
+						Msg("shutting down")
 
 					return nil
 				case <-ctx.Done():
 					return ctx.Err()
 				case msgID, ok := <-queue:
 					if !ok {
-						log.Debug().Int("threadID", threadID).Msg("shutting down")
+						log.Debug().
+							Int("scenarioID", r.scenarioID).
+							Int("threadID", threadID).
+							Msg("shutting down")
 
 						return nil
 					}
@@ -53,7 +63,8 @@ func (r *Runner) runSender(ctx context.Context, queue <-chan int, stop <-chan st
 }
 
 func (r *Runner) processMessage(ctx context.Context, threadID int, msgID int) {
-	ctxWithValues := context.WithValue(ctx, contextKey("threadID"), threadID)
+	ctxWithValues := context.WithValue(ctx, contextKey("scenarioID"), r.scenarioID)
+	ctxWithValues = context.WithValue(ctxWithValues, contextKey("threadID"), threadID)
 	ctxWithValues = context.WithValue(ctxWithValues, contextKey("msgID"), msgID)
 
 	startTime := time.Now()
@@ -61,6 +72,7 @@ func (r *Runner) processMessage(ctx context.Context, threadID int, msgID int) {
 	resp, err := r.sendRequest(ctxWithValues)
 	if err != nil {
 		log.Debug().
+			Int("scenarioID", r.scenarioID).
 			Int("threadID", threadID).
 			Int("msgID", msgID).
 			Err(err).

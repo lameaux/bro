@@ -13,8 +13,9 @@ import (
 )
 
 var (
-	errMissingMsgID    = errors.New("missing msgID")
-	errMissingThreadID = errors.New("missing threadID")
+	errMissingScenarioID = errors.New("missing scenarioID")
+	errMissingMsgID      = errors.New("missing msgID")
+	errMissingThreadID   = errors.New("missing threadID")
 )
 
 func (r *Runner) makeLogEvent(
@@ -22,6 +23,11 @@ func (r *Runner) makeLogEvent(
 	response *http.Response,
 	latency time.Duration,
 ) (*zerolog.Event, error) {
+	scenarioID, ok := ctx.Value(contextKey("scenarioID")).(int)
+	if !ok {
+		return nil, errMissingScenarioID
+	}
+
 	threadID, ok := ctx.Value(contextKey("threadID")).(int)
 	if !ok {
 		return nil, errMissingThreadID
@@ -33,6 +39,7 @@ func (r *Runner) makeLogEvent(
 	}
 
 	logEvent := log.Debug(). //nolint:zerologlint
+					Int("scenarioID", scenarioID).
 					Int("threadID", threadID).
 					Int("msgID", msgID).
 					Str("method", r.scenario.HTTPRequest.Method()).

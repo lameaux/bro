@@ -16,13 +16,20 @@ type contextKey string
 
 type Runner struct {
 	httpClient *http.Client
+	scenarioID int
 	scenario   *config.Scenario
 	listeners  []StatListener
 }
 
-func New(httpClient *http.Client, scenario *config.Scenario, listeners []StatListener) *Runner {
+func New(
+	httpClient *http.Client,
+	scenarioID int,
+	scenario *config.Scenario,
+	listeners []StatListener,
+) *Runner {
 	return &Runner{
 		httpClient: httpClient,
+		scenarioID: scenarioID,
 		scenario:   scenario,
 		listeners:  listeners,
 	}

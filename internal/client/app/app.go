@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/lameaux/bro/internal/client/config"
@@ -81,16 +82,48 @@ func (a *App) runScenarios(ctx context.Context) *stats.Stats {
 		Bool("parallel", a.conf.Parallel).
 		Msg("executing scenarios... press Ctrl+C (SIGINT) or send SIGTERM to terminate.")
 
-	for _, scenario := range a.conf.Scenarios {
-		a.runScenario(ctx, httpClient, scenario, results)
+	if a.conf.Parallel {
+		a.runParallel(ctx, httpClient, results)
+	} else {
+		a.runSerial(ctx, httpClient, results)
 	}
 
 	return results
 }
 
+func (a *App) runParallel(
+	ctx context.Context,
+	httpClient *http.Client,
+	results *stats.Stats,
+) {
+	var wg sync.WaitGroup
+
+	wg.Add(len(a.conf.Scenarios))
+
+	for scenarioID, scenario := range a.conf.Scenarios {
+		go func(scenarioID int, scenario *config.Scenario) {
+			defer wg.Done()
+			a.runScenario(ctx, httpClient, scenarioID, scenario, results)
+		}(scenarioID, scenario)
+	}
+
+	wg.Wait()
+}
+
+func (a *App) runSerial(
+	ctx context.Context,
+	httpClient *http.Client,
+	results *stats.Stats,
+) {
+	for scenarioID, scenario := range a.conf.Scenarios {
+		a.runScenario(ctx, httpClient, scenarioID, scenario, results)
+	}
+}
+
 func (a *App) runScenario(
 	ctx context.Context,
 	httpClient *http.Client,
+	scenarioID int,
 	scenario *config.Scenario,
 	results *stats.Stats,
 ) {
@@ -102,7 +135,7 @@ func (a *App) runScenario(
 		listeners = append(listeners, a.statsSender)
 	}
 
-	r := runner.New(httpClient, scenario, listeners)
+	r := runner.New(httpClient, scenarioID, scenario, listeners)
 
 	startTime := time.Now()
 
