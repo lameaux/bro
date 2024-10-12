@@ -55,20 +55,76 @@ func (r *Runner) Run(ctx context.Context) error {
 }
 
 func (r *Runner) runConstantRate(ctx context.Context) error {
-	queue := make(chan int, r.scenario.Threads())
-	stop := make(chan struct{})
+	return r.runStage(
+		ctx,
+		0,
+		r.scenario.Name,
+		r.scenario.Threads(),
+		r.scenario.Duration(),
+		r.scenario.Rps(),
+		r.scenario.Rps(),
+	)
+}
 
-	cancel := r.startGenerator(ctx, queue, stop)
-	defer cancel()
+func (r *Runner) runRampingRate(ctx context.Context) error {
+	previousRPS := 0
 
-	if err := r.runSender(ctx, queue, stop); err != nil {
-		return fmt.Errorf("failed sending requests: %w", err)
+	for stageID, stage := range r.scenario.Stages {
+		err := r.runStage(
+			ctx,
+			stageID,
+			stage.Name,
+			stage.Threads(),
+			stage.Duration(),
+			previousRPS,
+			stage.Rps(),
+		)
+		if err != nil {
+			return fmt.Errorf("failed to run stage: %w", err)
+		}
+
+		previousRPS = stage.Rps()
 	}
 
 	return nil
 }
 
-func (r *Runner) runRampingRate(_ context.Context) error {
-	// TODO ramping rate
+func (r *Runner) runStage(
+	ctx context.Context,
+	stageID int,
+	name string,
+	threadsCount int,
+	duration time.Duration,
+	startRPS int,
+	targetRPS int,
+) error {
+	log.Info().Dict(
+		"stage",
+		zerolog.Dict().
+			Int("stageID", stageID).
+			Str("name", name).
+			Int("startRPS", startRPS).
+			Int("targetRPS", targetRPS).
+			Int("threads", threadsCount).
+			Str("duration", duration.Round(time.Millisecond).String()),
+	).Msg("running stage")
+
+	queue := make(chan int, threadsCount)
+	stop := make(chan struct{})
+
+	cancel := startGenerator(
+		ctx,
+		duration,
+		startRPS,
+		targetRPS,
+		queue,
+		stop,
+	)
+	defer cancel()
+
+	if err := r.runSender(ctx, threadsCount, queue, stop); err != nil {
+		return fmt.Errorf("failed sending requests: %w", err)
+	}
+
 	return nil
 }

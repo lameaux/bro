@@ -1,6 +1,10 @@
 name: Ramping Rate Example
+httpClient:
+  timeout: 1s
+  disableKeepAlive: true
 defaults:
-  threads: 100
+  httpRequest:
+    url: http://0.0.0.0:9090/
   checks:
     - type: httpCode
       equals: 200
@@ -11,16 +15,18 @@ defaults:
     - metric: latency
       type: 99
       maxValue: 50
-httpClient:
-  timeout: 1s
 scenarios:
-  - name: 100 rps
+  - name: warmup 1000 rps
     stages:
       - name: ramp up
-        rps: 100
-        duration: 5s
-      - name: constant
-        rps: 100
-        duration: 30s
-    httpRequest:
-      url: http://0.0.0.0:9090/
+        rps: 1000
+        duration: 10s
+        threads: 100
+      - name: flat
+        rps: 1000
+        duration: 10s
+        threads: 100
+  - name: constant 1000 rps
+    rps: 1000
+    duration: 30s
+    threads: 100

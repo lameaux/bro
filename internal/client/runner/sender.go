@@ -23,12 +23,13 @@ func (e *SenderError) Error() string {
 
 func (r *Runner) runSender(
 	ctx context.Context,
+	threadsCount int,
 	queue <-chan int,
 	stop <-chan struct{},
 ) error {
 	var errGrp errgroup.Group
 
-	for t := 0; t < r.scenario.Threads(); t++ {
+	for t := 0; t < threadsCount; t++ {
 		threadID := t
 
 		errGrp.Go(func() error {

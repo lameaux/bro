@@ -5,15 +5,27 @@ import (
 	"time"
 )
 
-func (r *Runner) startGenerator(ctx context.Context, queue chan<- int, stop chan struct{}) func() {
-	durationTicker := time.NewTicker(r.scenario.Duration())
+func startGenerator(
+	ctx context.Context,
+	duration time.Duration,
+	startRPS int,
+	targetRPS int,
+	queue chan<- int,
+	stop chan struct{},
+) func() {
+	durationTicker := time.NewTicker(duration)
 	rateTicker := time.NewTicker(1 * time.Second)
 
 	go func() {
-		var num int
+		var num, seconds int
 
 		generate := func() {
-			for i := 0; i < r.scenario.Rps(); i++ {
+			seconds++
+
+			step := int(float64(targetRPS-startRPS) * (float64(seconds) / duration.Seconds()))
+			currentRps := startRPS + step
+
+			for i := 0; i < currentRps; i++ {
 				num++
 				queue <- num
 			}
