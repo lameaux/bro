@@ -8,6 +8,7 @@ RUN go mod download && go mod verify
 
 COPY . .
 
+ENV CGO_ENABLED=0 GOOS=linux
 RUN go build -ldflags "-X main.GitHash=$GIT_HASH" -o bro ./cmd/client/*.go
 RUN go build -ldflags "-X main.GitHash=$GIT_HASH" -o brod ./cmd/server/*.go
 

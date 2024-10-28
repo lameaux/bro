@@ -42,6 +42,10 @@ func MergeScenarios(scenario *Scenario, defaults *Scenario) *Scenario {
 	scenario.HTTPRequest.MethodRaw = PStringOrDefault(scenario.HTTPRequest.MethodRaw, defaults.HTTPRequest.MethodRaw)
 	scenario.HTTPRequest.BodyRaw = PStringOrDefault(scenario.HTTPRequest.BodyRaw, defaults.HTTPRequest.BodyRaw)
 
+	if len(scenario.Stages) == 0 {
+		scenario.Stages = append(scenario.Stages, defaults.Stages...)
+	}
+
 	scenario.Checks = append(scenario.Checks, defaults.Checks...)
 	scenario.Thresholds = append(scenario.Thresholds, defaults.Thresholds...)
 
