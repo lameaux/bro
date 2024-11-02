@@ -37,8 +37,7 @@ func (a *App) makeConfigFromFlags() (*config.Config, error) {
 	url := args[0]
 
 	conf := &config.Config{
-		Name:     "Calling " + url,
-		FileName: "n/a",
+		Name: "Calling " + url,
 		HTTPClient: config.HTTPClient{
 			Timeout: a.flags.Timeout,
 		},

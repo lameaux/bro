@@ -18,7 +18,10 @@ const (
 func resultsTable(conf *config.Config, results *stats.Stats, success bool) string {
 	var output strings.Builder
 
-	output.WriteString(fmt.Sprintf("Name: %s\nPath: %s\n", conf.Name, conf.FileName))
+	output.WriteString(fmt.Sprintf("Name: %s\n", conf.Name))
+	if conf.FileName != "" {
+		output.WriteString(fmt.Sprintf("Path: %s\n", conf.FileName))
+	}
 
 	tableWriter := table.NewWriter()
 	tableWriter.SetOutputMirror(&output)
