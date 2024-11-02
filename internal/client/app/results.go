@@ -19,6 +19,7 @@ func resultsTable(conf *config.Config, results *stats.Stats, success bool) strin
 	var output strings.Builder
 
 	output.WriteString(fmt.Sprintf("Name: %s\n", conf.Name))
+
 	if conf.FileName != "" {
 		output.WriteString(fmt.Sprintf("Path: %s\n", conf.FileName))
 	}
