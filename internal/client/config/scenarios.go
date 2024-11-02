@@ -39,7 +39,7 @@ func MergeScenarios(scenario *Scenario, defaults *Scenario) *Scenario {
 	scenario.ThreadsRaw = IntOrDefault(scenario.ThreadsRaw, defaults.ThreadsRaw)
 
 	scenario.HTTPRequest.URL = StringOrDefault(scenario.HTTPRequest.URL, defaults.HTTPRequest.URL)
-	scenario.HTTPRequest.MethodRaw = PStringOrDefault(scenario.HTTPRequest.MethodRaw, defaults.HTTPRequest.MethodRaw)
+	scenario.HTTPRequest.MethodRaw = StringOrDefault(scenario.HTTPRequest.MethodRaw, defaults.HTTPRequest.MethodRaw)
 	scenario.HTTPRequest.BodyRaw = PStringOrDefault(scenario.HTTPRequest.BodyRaw, defaults.HTTPRequest.BodyRaw)
 
 	if len(scenario.Stages) == 0 {

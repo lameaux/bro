@@ -21,6 +21,9 @@ func New(conf config.HTTPClient) *http.Client {
 		Int("maxIdleConnsPerHost", maxIdleConnsPerHost).
 		Msg("creating http client")
 
+	// TODO: http2 support
+	// TODO: proxy
+
 	transport := &http.Transport{
 		MaxIdleConnsPerHost: maxIdleConnsPerHost,
 		DisableKeepAlives:   conf.DisableKeepAlive,

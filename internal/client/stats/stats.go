@@ -21,6 +21,8 @@ type Stats struct {
 	counters         map[string]*Counters
 	thresholdsPassed map[string]bool
 	duration         map[string]time.Duration
+
+	// TODO: fix parallel map writes
 }
 
 func (s *Stats) StopTimer() {
