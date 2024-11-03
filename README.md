@@ -53,6 +53,8 @@ To run one of the examples:
 
 ```shell
 bro -silent examples/ping/httpbin.yaml
+```
+```
 Name: Ping httpbin
 Path: examples/ping/httpbin.yaml
 ┌──────────────┬───────┬─────────┬────────┬─────────┬─────────┬──────────────┬──────────┬─────┬────────┐
@@ -78,6 +80,8 @@ For example:
 
 ```shell
 bro -silent -r 10 -t 2 -d 5s -u https://httpbin.org
+```
+```
 Name: Calling https://httpbin.org
 ┌──────────┬───────┬─────────┬────────┬─────────┬─────────┬──────────────┬──────────┬─────┬────────┐
 │ SCENARIO │ TOTAL │ SUCCESS │ FAILED │ TIMEOUT │ INVALID │ LATENCY @P99 │ DURATION │ RPS │ PASSED │
@@ -92,7 +96,7 @@ See [User Manual](docs/user-manual.md) for more details on how to write scenario
 
 ### Flags
 
-There is a list of flags that you can use with bro:
+There is a list of flags that you can use with **bro**:
 
 ```
 Usage of bro:
