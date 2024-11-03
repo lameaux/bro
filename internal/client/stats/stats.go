@@ -2,15 +2,13 @@ package stats
 
 import (
 	"math"
+	"sync"
 	"time"
 )
 
 func New() *Stats {
 	return &Stats{
-		startTime:        time.Now(),
-		counters:         make(map[string]*Counters),
-		thresholdsPassed: make(map[string]bool),
-		duration:         make(map[string]time.Duration),
+		startTime: time.Now(),
 	}
 }
 
@@ -18,11 +16,9 @@ type Stats struct {
 	startTime time.Time
 	endTime   time.Time
 
-	counters         map[string]*Counters
-	thresholdsPassed map[string]bool
-	duration         map[string]time.Duration
-
-	// TODO: fix parallel map writes
+	counters         sync.Map // *Counters
+	passedThresholds sync.Map // bool
+	durations        sync.Map // time.Duration
 }
 
 func (s *Stats) StopTimer() {
@@ -34,37 +30,60 @@ func (s *Stats) TotalDuration() time.Duration {
 }
 
 func (s *Stats) SetCounters(scenarioName string, counters *Counters) {
-	s.counters[scenarioName] = counters
+	s.counters.Store(scenarioName, counters)
 }
 
 func (s *Stats) Counters(scenarioName string) *Counters {
-	return s.counters[scenarioName]
+	value, ok := s.counters.Load(scenarioName)
+	if !ok {
+		return nil
+	}
+
+	c, _ := value.(*Counters)
+
+	return c
 }
 
 func (s *Stats) SetDuration(scenarioName string, d time.Duration) {
-	s.duration[scenarioName] = d
+	s.durations.Store(scenarioName, d)
 }
 
 func (s *Stats) Duration(scenarioName string) time.Duration {
-	return s.duration[scenarioName]
+	value, ok := s.durations.Load(scenarioName)
+	if !ok {
+		return 0
+	}
+
+	d, _ := value.(time.Duration)
+
+	return d
 }
 
 func (s *Stats) SetThresholdsPassed(scenarioName string, passed bool) {
-	s.thresholdsPassed[scenarioName] = passed
+	s.passedThresholds.Store(scenarioName, passed)
 }
 
 func (s *Stats) ThresholdsPassed(scenarioName string) bool {
-	return s.thresholdsPassed[scenarioName]
+	value, ok := s.passedThresholds.Load(scenarioName)
+	if !ok {
+		return false
+	}
+
+	passed, _ := value.(bool)
+
+	return passed
 }
 
 func (s *Stats) AllThresholdsPassed() bool {
-	for _, passed := range s.thresholdsPassed {
-		if !passed {
-			return false
-		}
-	}
+	passed := true
 
-	return true
+	s.passedThresholds.Range(func(_, value any) bool {
+		passed, _ = value.(bool)
+
+		return passed
+	})
+
+	return passed
 }
 
 func (s *Stats) Rps(scenarioName string) float64 {
