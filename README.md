@@ -1,17 +1,15 @@
 # bro
 
-**bro** is a load testing tool.
-
 ![Screenshot](.github/images/bro1.png)
 
-**bro** enables you to run load testing scenarios with both constant and variable rate traffic patterns.
+**bro** is a **load testing** tool that enables you to run scenarios with both constant and variable rate traffic patterns.
 
-During the execution, it collects metrics such as **RPS** (requests per second), **latency**, and **errors**, and validates them against defined thresholds. 
+During execution, it collects metrics such as **RPS** (requests per second), **latency**, and **errors**, and validates them against predefined **thresholds**. 
 
 ## Installation
-
+****
 The tool is written in [Go](https://github.com/golang/go).
-You can build the binary from the source code and run it on your local machine or run it as a Docker container.
+You can compile the binary from the source code to run it on your local machine, or you can run it as a Docker container.
 
 ### Building from source codes
 
