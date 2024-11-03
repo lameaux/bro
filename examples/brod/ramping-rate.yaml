@@ -1,7 +1,6 @@
 name: Ramping Rate Example
 httpClient:
   timeout: 1s
-  disableKeepAlive: true
 defaults:
   httpRequest:
     url: http://0.0.0.0:9090/
@@ -20,13 +19,5 @@ scenarios:
     stages:
       - name: ramp up
         rps: 1000
-        duration: 10s
+        duration: 5s
         threads: 100
-      - name: flat
-        rps: 1000
-        duration: 10s
-        threads: 100
-  - name: constant 1000 rps
-    rps: 1000
-    duration: 30s
-    threads: 100

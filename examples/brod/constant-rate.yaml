@@ -1,20 +1,21 @@
 name: Constant Rate Example
 httpClient:
   timeout: 1s
+defaults:
+  httpRequest:
+    url: http://0.0.0.0:9090/
+  checks:
+    - type: httpCode
+      equals: 200
+  thresholds:
+    - metric: checks
+      type: httpCode
+      minRate: 0.99
+    - metric: latency
+      type: 99
+      maxValue: 50
 scenarios:
   - name: 1k
     rps: 1000
     duration: 5s
     threads: 100
-    httpRequest:
-      url: http://0.0.0.0:9090/
-    checks:
-      - type: httpCode
-        equals: 200
-    thresholds:
-      - metric: checks
-        type: httpCode
-        minRate: 0.99
-      - metric: latency
-        type: 99
-        maxValue: 50

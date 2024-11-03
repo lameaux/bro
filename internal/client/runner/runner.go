@@ -36,6 +36,16 @@ func New(
 }
 
 func (r *Runner) Run(ctx context.Context) error {
+	thresholds.AddScenario(r.scenario)
+
+	if len(r.scenario.Stages) > 0 {
+		return r.runVariableRate(ctx)
+	}
+
+	return r.runConstantRate(ctx)
+}
+
+func (r *Runner) runConstantRate(ctx context.Context) error {
 	log.Info().Dict(
 		"scenario",
 		zerolog.Dict().
@@ -43,22 +53,10 @@ func (r *Runner) Run(ctx context.Context) error {
 			Int("rps", r.scenario.Rps()).
 			Int("threads", r.scenario.Threads()).
 			Str("duration", r.scenario.Duration().Round(time.Millisecond).String()),
-	).Msg("running scenario")
+	).Msg("running constant rate scenario")
 
-	thresholds.AddScenario(r.scenario)
-
-	if len(r.scenario.Stages) > 0 {
-		return r.runRampingRate(ctx)
-	}
-
-	return r.runConstantRate(ctx)
-}
-
-func (r *Runner) runConstantRate(ctx context.Context) error {
 	return r.runStage(
 		ctx,
-		0,
-		r.scenario.Name,
 		r.scenario.Threads(),
 		r.scenario.Duration(),
 		r.scenario.Rps(),
@@ -66,14 +64,29 @@ func (r *Runner) runConstantRate(ctx context.Context) error {
 	)
 }
 
-func (r *Runner) runRampingRate(ctx context.Context) error {
+func (r *Runner) runVariableRate(ctx context.Context) error {
+	log.Info().Dict(
+		"scenario",
+		zerolog.Dict().
+			Str("name", r.scenario.Name),
+	).Msg("running variable rate scenario")
+
 	previousRPS := 0
 
 	for stageID, stage := range r.scenario.Stages {
+		log.Info().Dict(
+			"stage",
+			zerolog.Dict().
+				Int("stageID", stageID).
+				Str("name", stage.Name).
+				Int("startRPS", previousRPS).
+				Int("targetRPS", stage.Rps()).
+				Int("threads", stage.Threads()).
+				Str("duration", stage.Duration().Round(time.Millisecond).String()),
+		).Msg("running stage")
+
 		err := r.runStage(
 			ctx,
-			stageID,
-			stage.Name,
 			stage.Threads(),
 			stage.Duration(),
 			previousRPS,
@@ -91,24 +104,11 @@ func (r *Runner) runRampingRate(ctx context.Context) error {
 
 func (r *Runner) runStage(
 	ctx context.Context,
-	stageID int,
-	name string,
 	threadsCount int,
 	duration time.Duration,
 	startRPS int,
 	targetRPS int,
 ) error {
-	log.Info().Dict(
-		"stage",
-		zerolog.Dict().
-			Int("stageID", stageID).
-			Str("name", name).
-			Int("startRPS", startRPS).
-			Int("targetRPS", targetRPS).
-			Int("threads", threadsCount).
-			Str("duration", duration.Round(time.Millisecond).String()),
-	).Msg("running stage")
-
 	queue := make(chan int, threadsCount)
 	stop := make(chan struct{})
 
