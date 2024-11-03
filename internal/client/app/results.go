@@ -15,17 +15,8 @@ const (
 	latencyPercentile = 99
 )
 
-func resultsTable(conf *config.Config, results *stats.Stats, success bool) string {
-	var output strings.Builder
-
-	output.WriteString(fmt.Sprintf("Name: %s\n", conf.Name))
-
-	if conf.FileName != "" {
-		output.WriteString(fmt.Sprintf("Path: %s\n", conf.FileName))
-	}
-
+func generateTable(conf *config.Config, results *stats.Stats) table.Writer { //nolint: ireturn
 	tableWriter := table.NewWriter()
-	tableWriter.SetOutputMirror(&output)
 	tableWriter.AppendHeader(table.Row{
 		"Scenario", "Total", "Success", "Failed", "Timeout", "Invalid", "Latency @P99", "Duration", "RPS", "Passed",
 	})
@@ -55,10 +46,24 @@ func resultsTable(conf *config.Config, results *stats.Stats, success bool) strin
 	}
 
 	tableWriter.SetStyle(table.StyleLight)
-	tableWriter.Render()
+
+	return tableWriter
+}
+
+func generateTXT(conf *config.Config, results *stats.Stats, success bool) string {
+	var output strings.Builder
+
+	output.WriteString(fmt.Sprintf("Name: %s\n", conf.Name))
+
+	if conf.FileName != "" {
+		output.WriteString(fmt.Sprintf("Path: %s\n", conf.FileName))
+	}
+
+	tableWriter := generateTable(conf, results)
+	output.WriteString(tableWriter.Render())
 
 	output.WriteString(
-		fmt.Sprintf("Total duration: %s\n", results.TotalDuration()),
+		fmt.Sprintf("\nTotal duration: %s\n", results.TotalDuration()),
 	)
 
 	if success {
@@ -68,4 +73,10 @@ func resultsTable(conf *config.Config, results *stats.Stats, success bool) strin
 	}
 
 	return output.String()
+}
+
+func generateCSV(conf *config.Config, results *stats.Stats) string {
+	tableWriter := generateTable(conf, results)
+
+	return tableWriter.RenderCSV()
 }

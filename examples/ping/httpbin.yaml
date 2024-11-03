@@ -1,0 +1,20 @@
+name: Ping httpbin
+httpClient:
+  timeout: 5s
+scenarios:
+  - name: Check 200 OK
+    rps: 10
+    threads: 2
+    duration: 5s
+    httpRequest:
+      url: https://httpbin.org
+    checks:
+      - type: httpCode
+        equals: 200
+      - type: httpBody
+        contains: <title>httpbin.org</title>
+    thresholds:
+      - metric: checks
+        type: httpCode
+        minRate: 0.99
+

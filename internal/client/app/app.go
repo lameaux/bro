@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 
@@ -17,8 +18,10 @@ import (
 )
 
 const (
-	ExitSuccess = 0
-	ExitError   = 1
+	exitSuccess = 0
+	exitError   = 1
+
+	outputFilePermissions = 0o640
 )
 
 type App struct {
@@ -66,10 +69,10 @@ func (a *App) Run(ctx context.Context) int {
 	success := a.processResults(results)
 
 	if !success && !a.flags.SkipExitCode {
-		return ExitError
+		return exitError
 	}
 
-	return ExitSuccess
+	return exitSuccess
 }
 
 func (a *App) runScenarios(ctx context.Context) *stats.Stats {
@@ -171,10 +174,26 @@ func (a *App) processResults(runStats *stats.Stats) bool {
 		Bool("success", success).
 		Msg("result")
 
-	if !a.flags.SkipResults {
-		formattedOutput := resultsTable(a.conf, runStats, success)
+	var formattedOutput string
 
+	switch a.flags.Format {
+	case "txt":
+		formattedOutput = generateTXT(a.conf, runStats, success)
+	case "csv":
+		formattedOutput = generateCSV(a.conf, runStats)
+	default:
+		log.Error().Str("format", a.flags.Format).Msg("invalid format")
+	}
+
+	if a.flags.Output == "stdout" {
 		fmt.Println(formattedOutput) //nolint:forbidigo
+
+		return success
+	}
+
+	err := os.WriteFile(a.flags.Output, []byte(formattedOutput), outputFilePermissions)
+	if err != nil {
+		log.Error().Str("output", a.flags.Output).Err(err).Msg("failed to print output")
 	}
 
 	return success
