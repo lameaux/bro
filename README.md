@@ -7,7 +7,7 @@
 During execution, it collects metrics such as **RPS** (requests per second), **latency**, and **errors**, and validates them against predefined **thresholds**. 
 
 ## Installation
-****
+
 The tool is written in [Go](https://github.com/golang/go).
 You can compile the binary from the source code to run it on your local machine, or you can run it as a Docker container.
 
