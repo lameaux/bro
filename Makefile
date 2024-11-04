@@ -9,14 +9,14 @@ TEST_FLAGS := -race -coverprofile=coverage.out
 GO_FILES := $(shell find $(SRC_DIR) -name '*.go' ! -path '$(SRC_DIR)/protos/*go')
 
 .PHONY: all
-all: clean build lint test
+all: build lint test
 
 .PHONY: generate
 generate:
 	protoc --go_out=. --go_opt=paths=source_relative --go-grpc_out=. --go-grpc_opt=paths=source_relative protos/metrics/metrics.proto
 
 .PHONY: build
-build:
+build: clean
 	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_DIR)/bro $(SRC_DIR)/cmd/client/*.go
 	go build -ldflags "-X main.GitHash=$(GIT_HASH)" -o $(BUILD_DIR)/brod $(SRC_DIR)/cmd/server/*.go
 
@@ -50,8 +50,8 @@ coverage:
 
 .PHONY: install
 install: build
-	mv $(BUILD_DIR)/bro $(GOPATH)/bin
-	mv $(BUILD_DIR)/brod $(GOPATH)/bin
+	cp $(BUILD_DIR)/bro $(GOPATH)/bin
+	cp $(BUILD_DIR)/brod $(GOPATH)/bin
 
 .PHONY: run
 run: build

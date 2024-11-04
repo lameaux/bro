@@ -6,6 +6,8 @@
 
 During execution, it collects metrics such as **RPS** (requests per second), **latency**, and **errors**, and validates them against predefined **thresholds**. 
 
+The tool supports parallel scenario execution, making it easy to run benchmarks.
+
 ## Installation
 
 The tool is written in [Go](https://github.com/golang/go).
@@ -29,6 +31,10 @@ You will have `bro` binary installed in `$GOPATH/bin`, make sure it is present i
 bro -r 10 -t 2 -d 5s -u https://httpbin.org
 ```
 
+Alternatively, you can use the binary from the `./bin` directory:
+```shell
+./bin/bro -r 10 -t 2 -d 5s -u https://httpbin.org
+```
 
 ### Running in a Docker container
 
@@ -40,7 +46,7 @@ docker run --rm ghcr.io/lameaux/bro -r 10 -t 2 -d 5s -u https://httpbin.org
 
 To run the app, you need to define a testing scenario — either by providing a **YAML file** or by specifying it directly through **program arguments** (flags).
 
-See [User Manual](docs/user-manual.md) for more details on how to use the app.
+See [docs](./docs) for more details on how to use the app.
 
 ### YAML file
 To run the test you need to provide a path to a YAML file with scenario configuration.
@@ -66,7 +72,7 @@ Total duration: 5.194s
 OK
 ```
 
-See [User Manual](docs/user-manual.md) and [Examples](./examples/README.md) for more details on how to write scenarios.
+See [docs](./docs) and [examples](./examples) for more details on how to write scenarios.
 
 ### Program arguments
 
@@ -92,7 +98,7 @@ Total duration: 5.104s
 OK
 ```
 
-See [User Manual](docs/user-manual.md) for more details on how to write scenarios.
+See [docs](./docs) for more details on how to write scenarios.
 
 ### Flags
 
@@ -145,11 +151,11 @@ Usage of bro:
         target URL for scenario
 ```
 
-See [User Manual](docs/user-manual.md) for more details.
+See [docs](./docs) for more details.
 
 ## What's next?
 
-- Try **bro** together with **[mox](https://github.com/lameaux/mox)**, a tool for stubbing external dependencies, to test your application in isolation.
+- Try **bro** together with [mox](https://github.com/lameaux/mox), a tool for stubbing external dependencies, to test your application in isolation.
 - Check out [NFT repo](https://github.com/lameaux/nft) to see advanced scenarios for non-functional testing using **bro** & **mox** .
 
 ![Screenshot](.github/images/bro2.png)
