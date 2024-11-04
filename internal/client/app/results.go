@@ -72,6 +72,8 @@ func generateTXT(conf *config.Config, results *stats.Stats, success bool) string
 		output.WriteString("Failed")
 	}
 
+	output.WriteString("\n")
+
 	return output.String()
 }
 

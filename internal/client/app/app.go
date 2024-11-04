@@ -172,6 +172,8 @@ func (a *App) processResults(runStats *stats.Stats) bool {
 	log.Info().
 		Str("totalDuration", runStats.TotalDuration().Round(time.Millisecond).String()).
 		Bool("success", success).
+		Str("format", a.flags.Format).
+		Str("output", a.flags.Output).
 		Msg("result")
 
 	var formattedOutput string
