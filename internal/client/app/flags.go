@@ -14,6 +14,7 @@ type Flags struct {
 	Silent     bool
 	LogJSON    bool
 	SkipBanner bool
+	BuildInfo  bool
 
 	Output string
 	Format string
@@ -35,6 +36,7 @@ func ParseFlags() *Flags { //nolint:funlen
 	silent := flag.Bool("silent", false, "set log level to ERROR")
 	logJSON := flag.Bool("logJson", false, "set log output format as JSON")
 	skipBanner := flag.Bool("skipBanner", false, "do not show banner on start up")
+	buildInfo := flag.Bool("buildInfo", false, "print build info on start up")
 	skipExitCode := flag.Bool("skipExitCode", false, "do not set exit code on test failure")
 	brodAddr := flag.String("brodAddr", "", "address (host:port) of brod, e.g. brod:8080")
 	group := flag.String("group", "", "test group identifier")
@@ -71,6 +73,7 @@ func ParseFlags() *Flags { //nolint:funlen
 		Silent:       *silent,
 		LogJSON:      *logJSON,
 		SkipBanner:   *skipBanner,
+		BuildInfo:    *buildInfo,
 		SkipExitCode: *skipExitCode,
 		BrodAddr:     *brodAddr,
 		Group:        *group,
