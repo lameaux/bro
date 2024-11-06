@@ -15,11 +15,11 @@ func (a *App) printAbout() {
 	}
 
 	log.Info().
-		Str("version", a.appVersion).
-		Str("build", a.appBuild).
-		Int("cpus", runtime.NumCPU()).
+		Str("version", a.version).
+		Str("buildHash", a.buildHash).
+		Str("buildDate", a.buildDate).
 		Int("GOMAXPROCS", runtime.GOMAXPROCS(-1)).
-		Msg(a.appName)
+		Msg(a.name)
 
 	if a.flags.BuildInfo {
 		logBuildInfo()

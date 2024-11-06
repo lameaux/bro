@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"runtime"
 
 	"github.com/lameaux/bro/internal/server/grpcserver"
 	"github.com/lameaux/bro/internal/server/prom"
@@ -16,8 +17,7 @@ import (
 )
 
 const (
-	appName    = "brod"
-	appVersion = "v0.0.1"
+	appName = "brod"
 
 	defaultPortGrpc = 8080
 	defaultPortRest = 9090
@@ -25,7 +25,11 @@ const (
 	defaultMetricsPrefix = "bro_"
 )
 
-var GitHash string //nolint:gochecknoglobals
+var (
+	Version   string //nolint:gochecknoglobals
+	BuildHash string //nolint:gochecknoglobals
+	BuildDate string //nolint:gochecknoglobals
+)
 
 func main() {
 	debug := flag.Bool("debug", false, "enable debug mode")
@@ -51,7 +55,11 @@ func main() {
 		fmt.Print(banner.Banner) //nolint:forbidigo
 	}
 
-	log.Info().Str("version", appVersion).Str("build", GitHash).Msg(appName)
+	log.Info().Str("version", Version).
+		Str("buildHash", BuildHash).
+		Str("buildDate", BuildDate).
+		Int("GOMAXPROCS", runtime.GOMAXPROCS(-1)).
+		Msg(appName)
 
 	promMetrics := prom.NewMetrics(*metricsPrefix)
 

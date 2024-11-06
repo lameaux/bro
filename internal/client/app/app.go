@@ -25,19 +25,20 @@ const (
 )
 
 type App struct {
-	appName, appVersion, appBuild string
+	name, version, buildHash, buildDate string
 
 	conf        *config.Config
 	flags       *Flags
 	statsSender *stats.Sender
 }
 
-func New(appName, appVersion, appBuild string) (*App, error) {
+func New(name, version, buildHash, buildDate string) (*App, error) {
 	application := &App{
-		appName:    appName,
-		appVersion: appVersion,
-		appBuild:   appBuild,
-		flags:      ParseFlags(),
+		name:      name,
+		version:   version,
+		buildHash: buildHash,
+		buildDate: buildDate,
+		flags:     ParseFlags(),
 	}
 
 	application.setupLog()

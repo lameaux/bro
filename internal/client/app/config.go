@@ -31,7 +31,7 @@ func (a *App) loadConfig() error {
 func (a *App) makeConfigFromFlags() (*config.Config, error) {
 	args := a.flags.Args
 	if len(args) == 0 {
-		return nil, fmt.Errorf("target URL is missing. Example: %s [flags] -u <URL>", a.appName) //nolint:err113
+		return nil, fmt.Errorf("target URL is missing. Example: %s [flags] -u <URL>", a.name) //nolint:err113
 	}
 
 	url := args[0]
@@ -65,7 +65,7 @@ func (a *App) makeConfigFromFlags() (*config.Config, error) {
 func (a *App) loadConfigFromFile() (*config.Config, error) {
 	args := a.flags.Args
 	if len(args) == 0 {
-		return nil, fmt.Errorf("config location is missing. Example: %s [flags] <config.yaml>", a.appName) //nolint:err113
+		return nil, fmt.Errorf("config location is missing. Example: %s [flags] <config.yaml>", a.name) //nolint:err113
 	}
 
 	configLocation := args[0]

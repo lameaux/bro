@@ -10,14 +10,17 @@ import (
 )
 
 const (
-	appName    = "bro"
-	appVersion = "v0.0.1"
+	appName = "bro"
 )
 
-var GitHash string //nolint:gochecknoglobals
+var (
+	Version   string //nolint:gochecknoglobals
+	BuildHash string //nolint:gochecknoglobals
+	BuildDate string //nolint:gochecknoglobals
+)
 
 func main() {
-	broApp, err := app.New(appName, appVersion, GitHash)
+	broApp, err := app.New(appName, Version, BuildHash, BuildDate)
 	if err != nil {
 		log.Fatal().Err(err).Msg("app start failed")
 
